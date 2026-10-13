@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">SHAH1TUNNEL logo</title>
+  <desc id="desc">A modern logo for Shah1Tunnel with a golden crown, SHAH1TUNNEL wordmark and VERSION 1.0.0 on a dark background with blue and gold accents representing tunnels and secure network.</desc>
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1">
+      <stop offset="0%" stop-color="#0f1724"/>
+      <stop offset="100%" stop-color="#071026"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" x2="1">
+      <stop offset="0%" stop-color="#FFD36E"/>
+      <stop offset="100%" stop-color="#FFB84D"/>
+    </linearGradient>
+    <linearGradient id="blue" x1="0" x2="1">
+      <stop offset="0%" stop-color="#00B4FF"/>
+      <stop offset="100%" stop-color="#0063D1"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="1200" height="360" fill="url(#g1)"/>
+
+  <!-- Crown -->
+  <g transform="translate(80,40)">
+    <g filter="url(#glow)">
+      <path d="M40 80 L60 20 L90 60 L120 20 L140 80 L40 80 Z" fill="url(#gold)" stroke="#B8860B" stroke-width="3"/>
+      <circle cx="60" cy="20" r="6" fill="#FFFFFF" opacity="0.85"/>
+      <circle cx="120" cy="20" r="6" fill="#FFFFFF" opacity="0.85"/>
+    </g>
+    <!-- Crown base -->
+    <rect x="30" y="78" width="120" height="18" rx="9" fill="#B8860B"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(240,90)">
+    <text x="0" y="0" font-family="Segoe UI, Roboto, Arial, sans-serif" font-size="72" font-weight="700" fill="#E6F7FF">SHAH1TUNNEL</text>
+    <text x="0" y="64" font-family="Segoe UI, Roboto, Arial, sans-serif" font-size="20" fill="#B0E1FF">VERSION 1.0.0</text>
+  </g>
+
+  <!-- Tunnel motif: several curved lines -->
+  <g transform="translate(240,170)">
+    <path d="M0 40 C120 0, 240 0, 360 40" stroke="url(#blue)" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.95"/>
+    <path d="M0 60 C120 20, 240 20, 360 60" stroke="#073b6a" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
+    <path d="M20 80 C140 40, 260 40, 380 80" stroke="#02283a" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+  </g>
+
+  <!-- Small network nodes -->
+  <g transform="translate(640,140)">
+    <circle cx="0" cy="0" r="6" fill="url(#blue)"/>
+    <circle cx="60" cy="-10" r="5" fill="#00E0A3"/>
+    <circle cx="120" cy="6" r="4" fill="#FFD36E"/>
+
+    <path d="M0 0 L60 -10 L120 6" stroke="#58D3FF" stroke-width="1.5" fill="none" opacity="0.7"/>
+  </g>
+
+  <!-- Glow line across bottom -->
+  <rect x="0" y="300" width="1200" height="4" fill="url(#blue)" opacity="0.7"/>
+</svg>
