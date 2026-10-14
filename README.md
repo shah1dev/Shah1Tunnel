@@ -1,12 +1,12 @@
-![Shah1Tunnel logo](docs/img/shah1tunnel-logo.svg)
+![Shah Tunnel logo](docs/img/shah-tunnel-logo.svg)
 
-# Shah1Tunnel — Installation, Tunnels and Operations
+# Shah Tunnel — Installation, Tunnels and Operations
 
-Shah1Tunnel is a setup and management layer for creating a tunnel between two Linux servers. In the common layout, users connect to the Iran endpoint and selected TCP/UDP ports are forwarded to services on the overseas endpoint.
+Shah Tunnel is a setup and management layer for creating a tunnel between two Linux servers. In the common layout, users connect to the Iran endpoint and selected TCP/UDP ports are forwarded to services on the overseas endpoint.
 
 [English](README.md) · [فارسی](README.fa.md)
 
-> **Tunnel engine:** Shah1Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.17`; the installed core version may differ from the Shah1Tunnel package version.
+> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.17`; the installed core version may differ from the Shah Tunnel package version.
 
 ## Contents
 
@@ -49,7 +49,7 @@ Real-world throughput depends on the route, latency, packet loss, network filter
 Run this command on both servers:
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/shah1dev/Shah1Tunnel/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/shah1dev/Shah%31Tunnel/main/install.sh)
 ```
 
 The installer downloads the checksum manifest, launcher, package information and capsule archive. It verifies SHA-256 values strictly and proceeds only after successful verification. A checksum mismatch or invalid/incomplete archive stops installation.
@@ -99,7 +99,7 @@ Some networks require the reverse-connection mode described below. Results from 
 
 ### Feature snapshot against related tunnel tools
 
-| Capability | Shah1Tunnel engine (WatTunnel) | GOST | pingtunnel | Hans | ptunnel-ng |
+| Capability | Shah Tunnel engine (Shah Tunnel) | GOST | pingtunnel | Hans | ptunnel-ng |
 |---|:---:|:---:|:---:|:---:|:---:|
 | ICMP transport | ✅ | ✅ | ✅ | ✅ | ✅ |
 | Multiple transport families in the same implementation | ✅ | ✅ | — | — | — |
@@ -121,9 +121,9 @@ Some networks require the reverse-connection mode described below. Results from 
 
 ### Published figures from a real ICMP route
 
-The WatTunnel technical report records the figures below for a real Xray/VLESS traffic test dated 9 October 2026. These are measurements from that particular route and setup, not a speed guarantee for your servers or a Shah1Tunnel-specific benchmark.
+The Shah Tunnel technical report records the figures below for a real Xray/VLESS traffic test dated 9 October 2026. These are measurements from that particular route and setup, not a speed guarantee for your servers or a Shah Tunnel-specific benchmark.
 
-| Metric | WatTunnel engine | GOST over ICMP |
+| Metric | Shah Tunnel engine | GOST over ICMP |
 |---|---:|---:|
 | Xray/VLESS download | About 6 MB/s | About 1.6–5.4 MB/s |
 | Xray/VLESS upload | About 3.7 MB/s | Not measured in that report |
@@ -138,11 +138,11 @@ Earlier release notes also recorded results under other versions and test setups
 
 | Reported scenario | Published result | Important context |
 |---|---|---|
-| Earlier ICMP test with WatTunnel 1.8.0 | Peak around 33 MB/s; around 25 MB/s for one connection | Applies to the filtered route and settings described for that older test. |
+| Earlier ICMP test with Shah Tunnel 1.8.0 | Peak around 33 MB/s; around 25 MB/s for one connection | Applies to the filtered route and settings described for that older test. |
 | ICMP with 1400-byte packets and a 30 MB/s cap, 12 October 2026 | About 27.5 MB/s download, 26 MB/s upload, roughly 41 ms ping under load | Specific to that route and cap; test your own path before raising MTU. |
 | Cloudflare/WSS production run on 2.4.6, four sessions and around 250 user connections | Initially about 41 MB/s sustained download; speed tests reached 44–48 MB/s down and up to 82 MB/s up, with around 100 MB RAM per server | The same report noted a drop to about 1 MB/s after roughly three hours, which the 2.4.7 fix did not sustain away in that test. |
 
-Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.17 behavior. Test the currently installed release and your own route..com/JohnWatsoon/WatTunnel/releases).
+Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.17 behavior. Test the currently installed release and your own route.
 
 ### Separate comparison on an emulated link
 
@@ -151,14 +151,14 @@ Another test used an emulated path with 20 ms of delay each way, 0.2% packet los
 | Test setup | One flow (MB/s) | Multi-flow load (MB/s) | p50 latency | CPU-s/MB |
 |---|---:|---:|---:|---:|
 | Direct connection, no tunnel | 10.92 | 10.69 | 82 ms | 0.00 |
-| WatTunnel over UDP | 10.57 | 10.62 | 43 ms | 0.04 |
-| WatTunnel over TCP | 10.55 | 10.55 | 43 ms | 0.03 |
-| WatTunnel over TLS | 10.59 | 10.25 | 43 ms | 0.03 |
-| WatTunnel over WebSocket | 10.59 | 10.61 | 43 ms | 0.03 |
+| Shah Tunnel over UDP | 10.57 | 10.62 | 43 ms | 0.04 |
+| Shah Tunnel over TCP | 10.55 | 10.55 | 43 ms | 0.03 |
+| Shah Tunnel over TLS | 10.59 | 10.25 | 43 ms | 0.03 |
+| Shah Tunnel over WebSocket | 10.59 | 10.61 | 43 ms | 0.03 |
 | GOST over TCP | 10.84 | 10.41 | 83 ms | 0.01 |
 | GOST over WebSocket | 10.76 | 10.40 | 124 ms | 0.01 |
 
-In this emulated test, GOST used slightly less CPU and multi-flow throughput was close between the tools, while median latency for small requests was lower in the tested WatTunnel configurations. This is not evidence of a universal winner. The `h2`, `h2c`, `wss` and `grpc` carriers are not benchmarked in this table.
+In this emulated test, GOST used slightly less CPU and multi-flow throughput was close between the tools, while median latency for small requests was lower in the tested Shah Tunnel configurations. This is not evidence of a universal winner. The `h2`, `h2c`, `wss` and `grpc` carriers are not benchmarked in this table.
 
 ### Interpreting these results for your own servers
 
@@ -314,6 +314,6 @@ For an initial diagnosis, run `wattun test NAME`, then check the relevant servic
 
 In supported configurations, a recovery timer can restart an Iran-side tunnel that has remained disconnected for several minutes. It should not restart a tunnel that an administrator intentionally stopped. Check the feature's state in the manager settings.
 
-The Shah1Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.17` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
+The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.17` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
