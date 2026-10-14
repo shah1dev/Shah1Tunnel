@@ -1,62 +1,235 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="360" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
-  <title id="title">SHAH1TUNNEL logo</title>
-  <desc id="desc">A modern logo for Shah1Tunnel with a golden crown, SHAH1TUNNEL wordmark and VERSION 1.0.0 on a dark background with blue and gold accents representing tunnels and secure network.</desc>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="800" height="800" viewBox="0 0 800 800"
+     role="img" aria-labelledby="title desc">
+
+  <title id="title">SHAH1TUNNEL — Premium Round Logo</title>
+  <desc id="desc">A large circular cybersecurity emblem with a golden crown, shield, blue tunnel and network effects.</desc>
+
   <defs>
-    <linearGradient id="g1" x1="0" x2="1">
-      <stop offset="0%" stop-color="#0f1724"/>
-      <stop offset="100%" stop-color="#071026"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14294b"/>
+      <stop offset=".48" stop-color="#071225"/>
+      <stop offset="1" stop-color="#020711"/>
     </linearGradient>
-    <linearGradient id="gold" x1="0" x2="1">
-      <stop offset="0%" stop-color="#FFD36E"/>
-      <stop offset="100%" stop-color="#FFB84D"/>
+
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff4b0"/>
+      <stop offset=".25" stop-color="#ffd76a"/>
+      <stop offset=".6" stop-color="#d99a24"/>
+      <stop offset=".82" stop-color="#fff0a0"/>
+      <stop offset="1" stop-color="#a96913"/>
     </linearGradient>
-    <linearGradient id="blue" x1="0" x2="1">
-      <stop offset="0%" stop-color="#00B4FF"/>
-      <stop offset="100%" stop-color="#0063D1"/>
+
+    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a4f3ff"/>
+      <stop offset=".3" stop-color="#12caff"/>
+      <stop offset=".7" stop-color="#0877ff"/>
+      <stop offset="1" stop-color="#1740b8"/>
     </linearGradient>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+
+    <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#193f70"/>
+      <stop offset=".5" stop-color="#081a36"/>
+      <stop offset="1" stop-color="#030916"/>
+    </linearGradient>
+
+    <radialGradient id="centerGlow">
+      <stop offset="0" stop-color="#087cff" stop-opacity=".3"/>
+      <stop offset="1" stop-color="#071225" stop-opacity="0"/>
+    </radialGradient>
+
+    <filter id="blueGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="7" result="blur"/>
       <feMerge>
-        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
+
+    <filter id="goldGlow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="circleClip">
+      <circle cx="400" cy="400" r="360"/>
+    </clipPath>
+
+    <path id="topArc" d="M 115,400 A 285,285 0 0,1 685,400"/>
   </defs>
-  <rect width="1200" height="360" fill="url(#g1)"/>
 
-  <!-- Crown -->
-  <g transform="translate(80,40)">
-    <g filter="url(#glow)">
-      <path d="M40 80 L60 20 L90 60 L120 20 L140 80 L40 80 Z" fill="url(#gold)" stroke="#B8860B" stroke-width="3"/>
-      <circle cx="60" cy="20" r="6" fill="#FFFFFF" opacity="0.85"/>
-      <circle cx="120" cy="20" r="6" fill="#FFFFFF" opacity="0.85"/>
+  <!-- Main circular badge -->
+  <circle cx="400" cy="400" r="378" fill="#01050d"/>
+  <circle cx="400" cy="400" r="370" fill="url(#gold)"/>
+  <circle cx="400" cy="400" r="360" fill="url(#bg)"/>
+
+  <g clip-path="url(#circleClip)">
+    <circle cx="400" cy="400" r="340"
+            fill="none" stroke="#1c4b7b" stroke-width="2"/>
+    <circle cx="400" cy="400" r="324"
+            fill="none" stroke="#247bc0" stroke-width="1"
+            stroke-dasharray="3 12" opacity=".7"/>
+
+    <circle cx="400" cy="365" r="300" fill="url(#centerGlow)"/>
+
+    <!-- Background network -->
+    <g fill="none" stroke="#168dff" opacity=".3">
+      <path d="M100 330 L190 285 L255 325 L315 260"/>
+      <path d="M545 265 L610 310 L690 270"/>
+      <path d="M110 490 L190 450 L250 490"/>
+      <path d="M550 480 L620 440 L695 475"/>
+      <path d="M225 215 L270 250 L310 205"/>
+      <path d="M510 205 L550 245 L600 210"/>
     </g>
-    <!-- Crown base -->
-    <rect x="30" y="78" width="120" height="18" rx="9" fill="#B8860B"/>
+
+    <g fill="#6de6ff" filter="url(#blueGlow)">
+      <circle cx="190" cy="285" r="4"/>
+      <circle cx="255" cy="325" r="3"/>
+      <circle cx="610" cy="310" r="4"/>
+      <circle cx="190" cy="450" r="3"/>
+      <circle cx="620" cy="440" r="4"/>
+    </g>
+
+    <!-- Crown -->
+    <g filter="url(#goldGlow)">
+      <path d="M305 230
+               L274 155
+               L330 190
+               L365 118
+               L400 178
+               L435 118
+               L470 190
+               L526 155
+               L495 230 Z"
+            fill="url(#gold)" stroke="#fff0a0" stroke-width="4"
+            stroke-linejoin="round"/>
+
+      <path d="M305 230 L495 230 L485 252 L315 252 Z"
+            fill="#bd801d" stroke="#ffe8a0" stroke-width="3"/>
+
+      <path d="M320 238 L480 238" stroke="#fff5bf" stroke-width="3"/>
+
+      <g fill="#fff9dc">
+        <circle cx="274" cy="155" r="7"/>
+        <circle cx="365" cy="118" r="7"/>
+        <circle cx="435" cy="118" r="7"/>
+        <circle cx="526" cy="155" r="7"/>
+      </g>
+    </g>
+
+    <!-- Shield -->
+    <path d="M400 245
+             L535 292
+             L524 410
+             C516 475 462 520 400 550
+             C338 520 284 475 276 410
+             L265 292 Z"
+          fill="#020813" stroke="#06101e" stroke-width="12"/>
+
+    <path d="M400 252
+             L526 296
+             L515 407
+             C507 465 459 507 400 537
+             C341 507 293 465 285 407
+             L274 296 Z"
+          fill="url(#shield)" stroke="url(#blue)" stroke-width="5"/>
+
+    <path d="M400 271
+             L506 308
+             L496 403
+             C490 449 449 484 400 510
+             C351 484 310 449 304 403
+             L294 308 Z"
+          fill="none" stroke="#2caeff" stroke-width="2"
+          opacity=".55"/>
+
+    <!-- Tunnel rings -->
+    <g fill="none" stroke="url(#blue)" filter="url(#blueGlow)">
+      <ellipse cx="400" cy="385" rx="90" ry="78" stroke-width="5"/>
+      <ellipse cx="400" cy="385" rx="72" ry="62" stroke-width="4"/>
+      <ellipse cx="400" cy="385" rx="54" ry="46" stroke-width="4"/>
+      <ellipse cx="400" cy="385" rx="36" ry="30" stroke-width="3"/>
+      <ellipse cx="400" cy="385" rx="18" ry="15" stroke-width="3"/>
+    </g>
+
+    <path d="M310 385 L490 385" stroke="#8deaff"
+          stroke-width="2" opacity=".65"/>
+    <path d="M400 307 L400 463" stroke="#8deaff"
+          stroke-width="2" opacity=".5"/>
+
+    <circle cx="400" cy="385" r="9" fill="#d6fbff"
+            filter="url(#blueGlow)"/>
+
+    <!-- Security lock -->
+    <g transform="translate(400 456)">
+      <path d="M-15 -2 V-13 A15 15 0 0 1 15 -13 V-2"
+            fill="none" stroke="#ffd76a" stroke-width="5"
+            stroke-linecap="round"/>
+      <rect x="-22" y="-4" width="44" height="34" rx="7"
+            fill="url(#gold)" stroke="#fff0a0" stroke-width="2"/>
+      <circle cx="0" cy="9" r="4" fill="#4b3009"/>
+      <path d="M0 12 V19" stroke="#4b3009" stroke-width="3"/>
+    </g>
+
+    <!-- Brand name -->
+    <text x="400" y="600"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="53" font-weight="900"
+          letter-spacing="1.2"
+          fill="url(#gold)"
+          stroke="#50320d" stroke-width="1"
+          paint-order="stroke">
+      SHAH1
+    </text>
+
+    <text x="400" y="652"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="45" font-weight="900"
+          letter-spacing="3"
+          fill="url(#blue)">
+      TUNNEL
+    </text>
+
+    <!-- Decorative dividers -->
+    <path d="M210 675 H335 M465 675 H590"
+          stroke="url(#gold)" stroke-width="2"/>
+    <path d="M335 675 L400 668 L465 675"
+          fill="none" stroke="url(#gold)" stroke-width="2"/>
+
+    <text x="400" y="705"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="15" font-weight="700"
+          letter-spacing="4"
+          fill="#b8dcff">
+      SECURE • FAST • PRIVATE
+    </text>
+
+    <!-- Version badge -->
+    <rect x="322" y="723" width="156" height="30" rx="15"
+          fill="#07162a" stroke="#167fce" stroke-width="1.5"/>
+
+    <text x="400" y="743"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="14" font-weight="700"
+          letter-spacing="2"
+          fill="#75dfff">
+      VERSION 1.0.0
+    </text>
   </g>
 
-  <!-- Wordmark -->
-  <g transform="translate(240,90)">
-    <text x="0" y="0" font-family="Segoe UI, Roboto, Arial, sans-serif" font-size="72" font-weight="700" fill="#E6F7FF">SHAH1TUNNEL</text>
-    <text x="0" y="64" font-family="Segoe UI, Roboto, Arial, sans-serif" font-size="20" fill="#B0E1FF">VERSION 1.0.0</text>
-  </g>
+  <!-- Outer highlight -->
+  <circle cx="400" cy="400" r="368"
+          fill="none" stroke="#fff0ad" stroke-width="2"
+          opacity=".85"/>
+  <circle cx="400" cy="400" r="357"
+          fill="none" stroke="#3bbcff" stroke-width="1.5"
+          opacity=".7"/>
 
-  <!-- Tunnel motif: several curved lines -->
-  <g transform="translate(240,170)">
-    <path d="M0 40 C120 0, 240 0, 360 40" stroke="url(#blue)" stroke-width="6" fill="none" stroke-linecap="round" opacity="0.95"/>
-    <path d="M0 60 C120 20, 240 20, 360 60" stroke="#073b6a" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.6"/>
-    <path d="M20 80 C140 40, 260 40, 380 80" stroke="#02283a" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
-  </g>
-
-  <!-- Small network nodes -->
-  <g transform="translate(640,140)">
-    <circle cx="0" cy="0" r="6" fill="url(#blue)"/>
-    <circle cx="60" cy="-10" r="5" fill="#00E0A3"/>
-    <circle cx="120" cy="6" r="4" fill="#FFD36E"/>
-
-    <path d="M0 0 L60 -10 L120 6" stroke="#58D3FF" stroke-width="1.5" fill="none" opacity="0.7"/>
-  </g>
-
-  <!-- Glow line across bottom -->
-  <rect x="0" y="300" width="1200" height="4" fill="url(#blue)" opacity="0.7"/>
 </svg>
