@@ -1,10 +1,12 @@
+![Shah1Tunnel logo](docs/img/shah1tunnel-logo.svg)
+
 # Shah1Tunnel — Installation, Tunnels and Operations
 
 Shah1Tunnel is a setup and management layer for creating a tunnel between two Linux servers. In the common layout, users connect to the Iran endpoint and selected TCP/UDP ports are forwarded to services on the overseas endpoint.
 
-[English](README.md) · [فارسی](README.fa.md) · [Shah1Tunnel repository](https://github.com/shah1dev/Shah1Tunnel) · [WatTunnel engine](https://github.com/JohnWatsoon/WatTunnel)
+[English](README.md) · [فارسی](README.fa.md)
 
-> **Tunnel engine:** Shah1Tunnel provides packaging, integrity checks, setup and management adjustments. The current package information identifies the official WatTunnel engine as version `2.4.17`. Check the installed release after setup; the engine version and the Shah1Tunnel packaging version are not the same thing.
+> **Tunnel engine:** Shah1Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.17`; the installed core version may differ from the Shah1Tunnel package version.
 
 ## Contents
 
@@ -19,7 +21,6 @@ Shah1Tunnel is a setup and management layer for creating a tunnel between two Li
 - [Management commands](#management-commands)
 - [Configuration and port mapping](#configuration-and-port-mapping)
 - [Monitoring, security and troubleshooting](#monitoring-security-and-troubleshooting)
-- [Package details and updates](#package-details-and-updates)
 
 ## Capabilities
 
@@ -37,7 +38,7 @@ Real-world throughput depends on the route, latency, packet loss, network filter
 
 - Two Linux servers running `systemd`, with administrative access (`root` or `sudo`).
 - `amd64` or `arm64` for the supported core binaries.
-- Internet access to GitHub and the engine's release repository for online installation.
+- Internet access to retrieve the installer and required binaries.
 - Basic validation/install tools: `bash`, `curl`, `sha256sum`, `awk` and `tar`. Depending on the path, standard utilities such as `base64`, `find`, `mv`, `mktemp` and `df` are also required.
 - Firewall rules that allow the selected carrier and access to the destination service on the overseas server.
 
@@ -45,46 +46,13 @@ Real-world throughput depends on the route, latency, packet loss, network filter
 
 ### Online install
 
-Run the following on **both servers**. Review the installer before executing it:
+Run this command on both servers:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/shah1dev/Shah1Tunnel/main/install.sh -o /tmp/shah1tunnel-install.sh
-less /tmp/shah1tunnel-install.sh
-sudo bash /tmp/shah1tunnel-install.sh
+bash <(curl -fsSL https://raw.githubusercontent.com/shah1dev/Shah1Tunnel/main/install.sh)
 ```
 
 The installer downloads the checksum manifest, launcher, package information and capsule archive. It verifies SHA-256 values strictly and proceeds only after successful verification. A checksum mismatch or invalid/incomplete archive stops installation.
-
-### Running a local package
-
-For local installation, the complete Shah1Tunnel package must be present, including `S1T-START.sh`, `S1T-CHECKS.sha256`, `S1T-INFO-FA.txt` and the capsule archive at the expected path:
-
-```bash
-cd Shah1Tunnel
-if [ -f "S1T-CAPSULE/S1T-SOURCE.tar.gz" ]; then
-  sudo bash S1T-START.sh
-elif [ -f "S1T-CAPSULE/null" ]; then
-  ln -sf "$(pwd)/S1T-CAPSULE/null" "$(pwd)/S1T-CAPSULE/S1T-SOURCE.tar.gz"
-  sudo bash S1T-START.sh
-else
-  echo "Installer archive is missing from the expected location." >&2
-  exit 1
-fi
-```
-
-This method requires the complete package and its archive; README files alone are not an installer.
-
-### What the installer checks
-
-1. Required commands and package files are available.
-2. Files match the hashes recorded in `S1T-CHECKS.sha256`.
-3. The capsule is readable and does not contain unsafe extraction paths.
-4. Contents are extracted into a private temporary workspace, encoded filenames are restored, and the expected project layout is checked.
-5. The embedded installer runs and verifies the published binary for a supported architecture.
-
-The local launcher requires a writable workspace with at least 16 MiB free. It creates the workspace with restricted permissions and removes it when finished. If the default temporary locations do not have enough space, choose another disk-backed location for a local run, for example `sudo env WAT_TMPDIR=/mnt/tmp bash S1T-START.sh` (first ensure the directory exists and is writable by root).
-
-The package launcher should not execute the packaged code when a checksum fails or the archive is damaged. Read the full error output before retrying.
 
 ## Connecting two servers
 
@@ -129,11 +97,7 @@ Some networks require the reverse-connection mode described below. Results from 
 
 ## Engine feature comparison and test results
 
-This section describes the **WatTunnel engine** packaged and managed by Shah1Tunnel. The comparison does not mean the Shah1Tunnel installer implements a separate transport protocol of its own. Capability details and reported tests come from the engine project's published documentation. [Engine technical reference](https://github.com/JohnWatsoon/WatTunnel/blob/main/docs/TECHNICAL.md) · [Official releases](https://github.com/JohnWatsoon/WatTunnel/releases)
-
 ### Feature snapshot against related tunnel tools
-
-The symbols below summarize the feature comparison published by the WatTunnel project. They are not an independent audit of every current release of the other projects; behavior can vary by version and configuration.
 
 | Capability | Shah1Tunnel engine (WatTunnel) | GOST | pingtunnel | Hans | ptunnel-ng |
 |---|:---:|:---:|:---:|:---:|:---:|
@@ -168,8 +132,6 @@ The WatTunnel technical report records the figures below for a real Xray/VLESS t
 | Median latency for a small request while idle | About 40–45 ms | About 51 ms |
 | Reported RAM use | About 40 MB | About 50–70 MB |
 
-Source: [WatTunnel technical benchmark notes](https://github.com/JohnWatsoon/WatTunnel/blob/main/docs/TECHNICAL.md).
-
 ### Additional figures from earlier project notes
 
 Earlier release notes also recorded results under other versions and test setups. Because the route, release, rate cap and conditions differed, these figures should not be combined with the table above or treated as expected results on the current server.
@@ -180,7 +142,7 @@ Earlier release notes also recorded results under other versions and test setups
 | ICMP with 1400-byte packets and a 30 MB/s cap, 12 October 2026 | About 27.5 MB/s download, 26 MB/s upload, roughly 41 ms ping under load | Specific to that route and cap; test your own path before raising MTU. |
 | Cloudflare/WSS production run on 2.4.6, four sessions and around 250 user connections | Initially about 41 MB/s sustained download; speed tests reached 44–48 MB/s down and up to 82 MB/s up, with around 100 MB RAM per server | The same report noted a drop to about 1 MB/s after roughly three hours, which the 2.4.7 fix did not sustain away in that test. |
 
-Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.17 behavior. Test the currently installed release and your own route. Source: [WatTunnel release history](https://github.com/JohnWatsoon/WatTunnel/releases).
+Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.17 behavior. Test the currently installed release and your own route..com/JohnWatsoon/WatTunnel/releases).
 
 ### Separate comparison on an emulated link
 
@@ -196,7 +158,7 @@ Another test used an emulated path with 20 ms of delay each way, 0.2% packet los
 | GOST over TCP | 10.84 | 10.41 | 83 ms | 0.01 |
 | GOST over WebSocket | 10.76 | 10.40 | 124 ms | 0.01 |
 
-In this emulated test, GOST used slightly less CPU and multi-flow throughput was close between the tools, while median latency for small requests was lower in the tested WatTunnel configurations. This is not evidence of a universal winner. The `h2`, `h2c`, `wss` and `grpc` carriers are not benchmarked in this table. [Detailed test file](https://github.com/JohnWatsoon/WatTunnel/blob/main/bench/results-2026-10-09-final.md)
+In this emulated test, GOST used slightly less CPU and multi-flow throughput was close between the tools, while median latency for small requests was lower in the tested WatTunnel configurations. This is not evidence of a universal winner. The `h2`, `h2c`, `wss` and `grpc` carriers are not benchmarked in this table.
 
 ### Interpreting these results for your own servers
 
@@ -353,14 +315,5 @@ For an initial diagnosis, run `wattun test NAME`, then check the relevant servic
 In supported configurations, a recovery timer can restart an Iran-side tunnel that has remained disconnected for several minutes. It should not restart a tunnel that an administrator intentionally stopped. Check the feature's state in the manager settings.
 
 The Shah1Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.17` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
-
-## Package files and links
-
-- `install.sh` — downloads the package files and begins installation.
-- `S1T-CHECKS.sha256` — manifest of expected checksums.
-- `S1T-START.sh` — validates a local package, extracts it safely and starts the capsule installer.
-- `S1T-INFO-FA.txt` — package version notes and adjustments.
-- `S1T-CAPSULE/` — contains the packaged installation archive.
-- Tunnel engine and official release history: [WatTunnel Releases](https://github.com/JohnWatsoon/WatTunnel/releases).
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
