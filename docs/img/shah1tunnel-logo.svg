@@ -2,7 +2,7 @@
      width="1000" height="1000" viewBox="0 0 1000 1000"
      role="img" aria-labelledby="title desc">
 
-  <title id="title">SHAH1TUNNEL Premium Emblem</title>
+  <title id="title">SHAHTUNNEL Premium Emblem</title>
   <desc id="desc">A premium circular tunnel and cybersecurity logo with metallic gold crown, dimensional shield and luminous blue tunnel.</desc>
 
   <defs>
@@ -343,7 +343,7 @@
           letter-spacing="-1.5"
           fill="#060d1a"
           stroke="#060d1a" stroke-width="12"
-          paint-order="stroke">SHAH1</text>
+          paint-order="stroke">SHAH</text>
 
     <text x="500" y="706"
           text-anchor="middle"
@@ -353,7 +353,7 @@
           fill="url(#letterGold)"
           stroke="#8c5714" stroke-width="2"
           paint-order="stroke"
-          filter="url(#goldGlow)">SHAH1</text>
+          filter="url(#goldGlow)">SHAH</text>
 
     <text x="500" y="768"
           text-anchor="middle"
