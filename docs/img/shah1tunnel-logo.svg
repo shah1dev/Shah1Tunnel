@@ -1,235 +1,413 @@
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="800" height="800" viewBox="0 0 800 800"
+     width="1000" height="1000" viewBox="0 0 1000 1000"
      role="img" aria-labelledby="title desc">
 
-  <title id="title">SHAH1TUNNEL — Premium Round Logo</title>
-  <desc id="desc">A large circular cybersecurity emblem with a golden crown, shield, blue tunnel and network effects.</desc>
+  <title id="title">SHAH1TUNNEL Premium Emblem</title>
+  <desc id="desc">A premium circular tunnel and cybersecurity logo with metallic gold crown, dimensional shield and luminous blue tunnel.</desc>
 
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#14294b"/>
-      <stop offset=".48" stop-color="#071225"/>
-      <stop offset="1" stop-color="#020711"/>
-    </linearGradient>
-
-    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff4b0"/>
-      <stop offset=".25" stop-color="#ffd76a"/>
-      <stop offset=".6" stop-color="#d99a24"/>
-      <stop offset=".82" stop-color="#fff0a0"/>
-      <stop offset="1" stop-color="#a96913"/>
-    </linearGradient>
-
-    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#a4f3ff"/>
-      <stop offset=".3" stop-color="#12caff"/>
-      <stop offset=".7" stop-color="#0877ff"/>
-      <stop offset="1" stop-color="#1740b8"/>
-    </linearGradient>
-
-    <linearGradient id="shield" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#193f70"/>
-      <stop offset=".5" stop-color="#081a36"/>
-      <stop offset="1" stop-color="#030916"/>
-    </linearGradient>
-
-    <radialGradient id="centerGlow">
-      <stop offset="0" stop-color="#087cff" stop-opacity=".3"/>
-      <stop offset="1" stop-color="#071225" stop-opacity="0"/>
+    <!-- Background -->
+    <radialGradient id="background" cx="50%" cy="39%" r="70%">
+      <stop offset="0%" stop-color="#173c66"/>
+      <stop offset="42%" stop-color="#0a1930"/>
+      <stop offset="76%" stop-color="#040b18"/>
+      <stop offset="100%" stop-color="#01030a"/>
     </radialGradient>
 
-    <filter id="blueGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="7" result="blur"/>
+    <radialGradient id="innerLight">
+      <stop offset="0%" stop-color="#087dff" stop-opacity=".34"/>
+      <stop offset="55%" stop-color="#0754c7" stop-opacity=".12"/>
+      <stop offset="100%" stop-color="#020916" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Metallic gold -->
+    <linearGradient id="goldMetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fffbd4"/>
+      <stop offset="12%" stop-color="#ffe891"/>
+      <stop offset="26%" stop-color="#d99b2b"/>
+      <stop offset="43%" stop-color="#fff0a7"/>
+      <stop offset="58%" stop-color="#b97717"/>
+      <stop offset="75%" stop-color="#ffda65"/>
+      <stop offset="88%" stop-color="#9a5e11"/>
+      <stop offset="100%" stop-color="#ffe6a0"/>
+    </linearGradient>
+
+    <linearGradient id="goldFace" x1="0" y1="0" x2=".8" y2="1">
+      <stop offset="0%" stop-color="#fff7cb"/>
+      <stop offset="18%" stop-color="#ffe17a"/>
+      <stop offset="45%" stop-color="#f3b83c"/>
+      <stop offset="68%" stop-color="#c17b16"/>
+      <stop offset="86%" stop-color="#ffdc71"/>
+      <stop offset="100%" stop-color="#8a5010"/>
+    </linearGradient>
+
+    <linearGradient id="blueMetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#c6faff"/>
+      <stop offset="20%" stop-color="#44dfff"/>
+      <stop offset="45%" stop-color="#008fff"/>
+      <stop offset="70%" stop-color="#0750d8"/>
+      <stop offset="100%" stop-color="#071d69"/>
+    </linearGradient>
+
+    <linearGradient id="shieldFace" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#244c77"/>
+      <stop offset="25%" stop-color="#102b4d"/>
+      <stop offset="55%" stop-color="#07152b"/>
+      <stop offset="80%" stop-color="#030916"/>
+      <stop offset="100%" stop-color="#123e68"/>
+    </linearGradient>
+
+    <linearGradient id="letterGold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fff9d8"/>
+      <stop offset="25%" stop-color="#ffe491"/>
+      <stop offset="53%" stop-color="#ffc343"/>
+      <stop offset="78%" stop-color="#d78c19"/>
+      <stop offset="100%" stop-color="#fff0ae"/>
+    </linearGradient>
+
+    <linearGradient id="letterBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d1fbff"/>
+      <stop offset="24%" stop-color="#73eaff"/>
+      <stop offset="52%" stop-color="#13aaff"/>
+      <stop offset="78%" stop-color="#0870ee"/>
+      <stop offset="100%" stop-color="#b0eeff"/>
+    </linearGradient>
+
+    <!-- Glow and depth -->
+    <filter id="blueGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="blur2"/>
       <feMerge>
-        <feMergeNode in="blur"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
 
     <filter id="goldGlow" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur"/>
       <feMerge>
         <feMergeNode in="blur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
 
-    <clipPath id="circleClip">
-      <circle cx="400" cy="400" r="360"/>
+    <filter id="deepShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="12" result="blur"/>
+      <feOffset dy="10" dx="0" result="offset"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope=".65"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softBlur">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+
+    <clipPath id="roundClip">
+      <circle cx="500" cy="500" r="452"/>
     </clipPath>
 
-    <path id="topArc" d="M 115,400 A 285,285 0 0,1 685,400"/>
+    <path id="topCurve" d="M 164,465 A 336,336 0 0,1 836,465"/>
   </defs>
 
-  <!-- Main circular badge -->
-  <circle cx="400" cy="400" r="378" fill="#01050d"/>
-  <circle cx="400" cy="400" r="370" fill="url(#gold)"/>
-  <circle cx="400" cy="400" r="360" fill="url(#bg)"/>
+  <!-- Outer medallion -->
+  <circle cx="500" cy="500" r="493" fill="#01030a"/>
+  <circle cx="500" cy="500" r="485" fill="url(#goldMetal)"/>
+  <circle cx="500" cy="500" r="476" fill="#071326"/>
+  <circle cx="500" cy="500" r="465"
+          fill="none" stroke="#fff0a6" stroke-width="2" opacity=".95"/>
+  <circle cx="500" cy="500" r="458"
+          fill="none" stroke="#006bb7" stroke-width="5"/>
+  <circle cx="500" cy="500" r="451"
+          fill="url(#background)"/>
 
-  <g clip-path="url(#circleClip)">
-    <circle cx="400" cy="400" r="340"
-            fill="none" stroke="#1c4b7b" stroke-width="2"/>
-    <circle cx="400" cy="400" r="324"
-            fill="none" stroke="#247bc0" stroke-width="1"
-            stroke-dasharray="3 12" opacity=".7"/>
+  <g clip-path="url(#roundClip)">
 
-    <circle cx="400" cy="365" r="300" fill="url(#centerGlow)"/>
+    <!-- Atmospheric light -->
+    <ellipse cx="500" cy="410" rx="390" ry="390"
+             fill="url(#innerLight)"/>
+    <ellipse cx="500" cy="405" rx="250" ry="170"
+             fill="#008cff" opacity=".07" filter="url(#softBlur)"/>
 
-    <!-- Background network -->
-    <g fill="none" stroke="#168dff" opacity=".3">
-      <path d="M100 330 L190 285 L255 325 L315 260"/>
-      <path d="M545 265 L610 310 L690 270"/>
-      <path d="M110 490 L190 450 L250 490"/>
-      <path d="M550 480 L620 440 L695 475"/>
-      <path d="M225 215 L270 250 L310 205"/>
-      <path d="M510 205 L550 245 L600 210"/>
+    <!-- Technical circular details -->
+    <circle cx="500" cy="500" r="425"
+            fill="none" stroke="#1f6096" stroke-width="2"
+            stroke-dasharray="2 13" opacity=".8"/>
+
+    <circle cx="500" cy="500" r="413"
+            fill="none" stroke="#f8cf65" stroke-width="1"
+            stroke-dasharray="36 9 3 9" opacity=".55"/>
+
+    <circle cx="500" cy="500" r="398"
+            fill="none" stroke="#3dcaff" stroke-width="1.5"
+            opacity=".38"/>
+
+    <!-- Tiny network constellation -->
+    <g fill="none" stroke="#178bd7" stroke-width="2" opacity=".45">
+      <path d="M128 350 L205 315 L254 353 L290 315"/>
+      <path d="M710 315 L758 350 L837 316"/>
+      <path d="M135 585 L217 550 L270 580"/>
+      <path d="M730 580 L784 548 L858 588"/>
+      <path d="M246 230 L280 258 L310 221"/>
+      <path d="M689 222 L722 260 L755 233"/>
     </g>
 
-    <g fill="#6de6ff" filter="url(#blueGlow)">
-      <circle cx="190" cy="285" r="4"/>
-      <circle cx="255" cy="325" r="3"/>
-      <circle cx="610" cy="310" r="4"/>
-      <circle cx="190" cy="450" r="3"/>
-      <circle cx="620" cy="440" r="4"/>
+    <g fill="#7ceaff" filter="url(#blueGlow)">
+      <circle cx="205" cy="315" r="4"/>
+      <circle cx="254" cy="353" r="3"/>
+      <circle cx="758" cy="350" r="4"/>
+      <circle cx="217" cy="550" r="3"/>
+      <circle cx="784" cy="548" r="4"/>
     </g>
 
-    <!-- Crown -->
-    <g filter="url(#goldGlow)">
-      <path d="M305 230
-               L274 155
-               L330 190
-               L365 118
-               L400 178
-               L435 118
-               L470 190
-               L526 155
-               L495 230 Z"
-            fill="url(#gold)" stroke="#fff0a0" stroke-width="4"
-            stroke-linejoin="round"/>
+    <!-- Crown shadow -->
+    <path d="M340 270 L295 185 L370 220 L430 129
+             L500 202 L570 129 L630 220 L705 185
+             L660 270 Z"
+          fill="#00040c" opacity=".8"
+          transform="translate(0 13)" filter="url(#deepShadow)"/>
 
-      <path d="M305 230 L495 230 L485 252 L315 252 Z"
-            fill="#bd801d" stroke="#ffe8a0" stroke-width="3"/>
+    <!-- Crown 3D side -->
+    <path d="M340 258 L295 185 L370 220 L430 129
+             L500 202 L570 129 L630 220 L705 185
+             L660 258 Z"
+          fill="#8d5a16" stroke="#ffd96b" stroke-width="4"
+          stroke-linejoin="round"/>
 
-      <path d="M320 238 L480 238" stroke="#fff5bf" stroke-width="3"/>
+    <!-- Crown front face -->
+    <path d="M340 249 L295 185 L378 222 L430 129
+             L500 202 L570 129 L622 222 L705 185
+             L660 249 Z"
+          fill="url(#goldFace)" stroke="#fff0a8" stroke-width="3"
+          stroke-linejoin="round" filter="url(#goldGlow)"/>
 
-      <g fill="#fff9dc">
-        <circle cx="274" cy="155" r="7"/>
-        <circle cx="365" cy="118" r="7"/>
-        <circle cx="435" cy="118" r="7"/>
-        <circle cx="526" cy="155" r="7"/>
-      </g>
+    <!-- Crown bevel facets -->
+    <path d="M295 185 L355 240 L378 222 Z"
+          fill="#fff4b8" opacity=".75"/>
+    <path d="M430 129 L418 224 L500 202 Z"
+          fill="#fff5c2" opacity=".85"/>
+    <path d="M570 129 L582 224 L500 202 Z"
+          fill="#bc7a17" opacity=".85"/>
+    <path d="M705 185 L645 240 L622 222 Z"
+          fill="#fff1ab" opacity=".65"/>
+
+    <path d="M340 249 L660 249 L647 282 L353 282 Z"
+          fill="url(#goldMetal)" stroke="#ffe99a" stroke-width="3"/>
+
+    <path d="M355 260 L645 260"
+          fill="none" stroke="#fff8d3" stroke-width="3" opacity=".8"/>
+
+    <g fill="#fffce8" filter="url(#goldGlow)">
+      <circle cx="295" cy="185" r="8"/>
+      <circle cx="430" cy="129" r="9"/>
+      <circle cx="570" cy="129" r="9"/>
+      <circle cx="705" cy="185" r="8"/>
     </g>
 
-    <!-- Shield -->
-    <path d="M400 245
-             L535 292
-             L524 410
-             C516 475 462 520 400 550
-             C338 520 284 475 276 410
-             L265 292 Z"
-          fill="#020813" stroke="#06101e" stroke-width="12"/>
+    <g fill="#68e6ff" stroke="#fff" stroke-width="1">
+      <circle cx="370" cy="237" r="5"/>
+      <circle cx="500" cy="242" r="6"/>
+      <circle cx="630" cy="237" r="5"/>
+    </g>
 
-    <path d="M400 252
-             L526 296
-             L515 407
-             C507 465 459 507 400 537
-             C341 507 293 465 285 407
-             L274 296 Z"
-          fill="url(#shield)" stroke="url(#blue)" stroke-width="5"/>
+    <!-- Main shield shadow -->
+    <path d="M500 280 L672 341 L654 488
+             C641 580 565 635 500 668
+             C435 635 359 580 346 488
+             L328 341 Z"
+          fill="#00030a" stroke="#00030a" stroke-width="18"
+          filter="url(#deepShadow)"/>
 
-    <path d="M400 271
-             L506 308
-             L496 403
-             C490 449 449 484 400 510
-             C351 484 310 449 304 403
-             L294 308 Z"
-          fill="none" stroke="#2caeff" stroke-width="2"
-          opacity=".55"/>
+    <!-- Shield outer metallic edge -->
+    <path d="M500 274 L678 337 L660 490
+             C647 587 568 644 500 678
+             C432 644 353 587 340 490
+             L322 337 Z"
+          fill="url(#goldMetal)" stroke="#ffd96c" stroke-width="3"/>
+
+    <!-- Shield main body -->
+    <path d="M500 288 L662 345 L645 485
+             C633 574 561 624 500 655
+             C439 624 367 574 355 485
+             L338 345 Z"
+          fill="url(#shieldFace)" stroke="#102e52" stroke-width="5"/>
+
+    <!-- Shield luminous outline -->
+    <path d="M500 303 L647 353 L631 481
+             C620 559 556 604 500 633
+             C444 604 380 559 369 481
+             L353 353 Z"
+          fill="none" stroke="url(#blueMetal)" stroke-width="4"
+          filter="url(#blueGlow)"/>
+
+    <path d="M500 315 L632 360 L618 478
+             C608 547 551 587 500 614
+             C449 587 392 547 382 478
+             L368 360 Z"
+          fill="none" stroke="#7bdfff" stroke-width="1.5"
+          opacity=".6"/>
+
+    <!-- Blue tunnel ambient illumination -->
+    <ellipse cx="500" cy="444" rx="155" ry="128"
+             fill="#0068ff" opacity=".15" filter="url(#softBlur)"/>
+
+    <!-- Perspective tunnel beams -->
+    <g fill="none" stroke-linecap="round">
+      <path d="M377 438 L450 438" stroke="#008fff"
+            stroke-width="3" opacity=".4"/>
+      <path d="M623 438 L550 438" stroke="#008fff"
+            stroke-width="3" opacity=".4"/>
+
+      <path d="M397 370 L461 416" stroke="#32caff"
+            stroke-width="3" opacity=".4"/>
+      <path d="M603 370 L539 416" stroke="#32caff"
+            stroke-width="3" opacity=".4"/>
+
+      <path d="M397 512 L461 470" stroke="#168bff"
+            stroke-width="3" opacity=".4"/>
+      <path d="M603 512 L539 470" stroke="#168bff"
+            stroke-width="3" opacity=".4"/>
+    </g>
 
     <!-- Tunnel rings -->
-    <g fill="none" stroke="url(#blue)" filter="url(#blueGlow)">
-      <ellipse cx="400" cy="385" rx="90" ry="78" stroke-width="5"/>
-      <ellipse cx="400" cy="385" rx="72" ry="62" stroke-width="4"/>
-      <ellipse cx="400" cy="385" rx="54" ry="46" stroke-width="4"/>
-      <ellipse cx="400" cy="385" rx="36" ry="30" stroke-width="3"/>
-      <ellipse cx="400" cy="385" rx="18" ry="15" stroke-width="3"/>
+    <g fill="none" filter="url(#blueGlow)">
+      <ellipse cx="500" cy="438" rx="118" ry="105"
+               stroke="#087aff" stroke-width="10" opacity=".55"/>
+
+      <ellipse cx="500" cy="438" rx="105" ry="94"
+               stroke="#1abaff" stroke-width="6"/>
+
+      <ellipse cx="500" cy="438" rx="83" ry="75"
+               stroke="#0784ff" stroke-width="7"/>
+
+      <ellipse cx="500" cy="438" rx="62" ry="56"
+               stroke="#39d9ff" stroke-width="6"/>
+
+      <ellipse cx="500" cy="438" rx="41" ry="38"
+               stroke="#0875ff" stroke-width="5"/>
+
+      <ellipse cx="500" cy="438" rx="22" ry="21"
+               stroke="#9df4ff" stroke-width="4"/>
     </g>
 
-    <path d="M310 385 L490 385" stroke="#8deaff"
-          stroke-width="2" opacity=".65"/>
-    <path d="M400 307 L400 463" stroke="#8deaff"
-          stroke-width="2" opacity=".5"/>
+    <!-- Tunnel highlight -->
+    <path d="M391 413 Q435 330 500 333"
+          fill="none" stroke="#d1fbff" stroke-width="3"
+          stroke-linecap="round" opacity=".65"/>
 
-    <circle cx="400" cy="385" r="9" fill="#d6fbff"
-            filter="url(#blueGlow)"/>
+    <path d="M610 463 Q572 535 500 538"
+          fill="none" stroke="#1376ff" stroke-width="4"
+          stroke-linecap="round" opacity=".8"/>
 
-    <!-- Security lock -->
-    <g transform="translate(400 456)">
-      <path d="M-15 -2 V-13 A15 15 0 0 1 15 -13 V-2"
-            fill="none" stroke="#ffd76a" stroke-width="5"
+    <circle cx="500" cy="438" r="13"
+            fill="#e5feff" filter="url(#blueGlow)"/>
+
+    <!-- Lock in front of shield -->
+    <g filter="url(#goldGlow)">
+      <path d="M477 527 V512
+               C477 481 523 481 523 512 V527"
+            fill="none" stroke="url(#goldMetal)" stroke-width="10"
             stroke-linecap="round"/>
-      <rect x="-22" y="-4" width="44" height="34" rx="7"
-            fill="url(#gold)" stroke="#fff0a0" stroke-width="2"/>
-      <circle cx="0" cy="9" r="4" fill="#4b3009"/>
-      <path d="M0 12 V19" stroke="#4b3009" stroke-width="3"/>
+
+      <rect x="462" y="519" width="76" height="62" rx="12"
+            fill="#56370d" stroke="#fff0a1" stroke-width="3"/>
+
+      <rect x="468" y="524" width="64" height="50" rx="8"
+            fill="url(#goldFace)" stroke="#e6aa36" stroke-width="2"/>
+
+      <circle cx="500" cy="544" r="6" fill="#52330b"/>
+      <path d="M500 548 V560" stroke="#52330b"
+            stroke-width="5" stroke-linecap="round"/>
     </g>
 
-    <!-- Brand name -->
-    <text x="400" y="600"
+    <!-- Branding panel -->
+    <path d="M150 679 L235 642 L765 642 L850 679
+             L815 793 L185 793 Z"
+          fill="#030b18" opacity=".92"
+          stroke="#1b5e91" stroke-width="2"/>
+
+    <path d="M205 665 L795 665"
+          stroke="url(#goldMetal)" stroke-width="2"
+          opacity=".9"/>
+
+    <!-- Main wordmark with depth -->
+    <text x="500" y="713"
           text-anchor="middle"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="53" font-weight="900"
-          letter-spacing="1.2"
-          fill="url(#gold)"
-          stroke="#50320d" stroke-width="1"
-          paint-order="stroke">
-      SHAH1
-    </text>
+          font-size="77" font-weight="900"
+          letter-spacing="-1.5"
+          fill="#060d1a"
+          stroke="#060d1a" stroke-width="12"
+          paint-order="stroke">SHAH1</text>
 
-    <text x="400" y="652"
+    <text x="500" y="706"
           text-anchor="middle"
           font-family="Arial, Helvetica, sans-serif"
-          font-size="45" font-weight="900"
-          letter-spacing="3"
-          fill="url(#blue)">
-      TUNNEL
-    </text>
+          font-size="77" font-weight="900"
+          letter-spacing="-1.5"
+          fill="url(#letterGold)"
+          stroke="#8c5714" stroke-width="2"
+          paint-order="stroke"
+          filter="url(#goldGlow)">SHAH1</text>
 
-    <!-- Decorative dividers -->
-    <path d="M210 675 H335 M465 675 H590"
-          stroke="url(#gold)" stroke-width="2"/>
-    <path d="M335 675 L400 668 L465 675"
-          fill="none" stroke="url(#gold)" stroke-width="2"/>
+    <text x="500" y="768"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="54" font-weight="900"
+          letter-spacing="5"
+          fill="#031024"
+          stroke="#031024" stroke-width="10"
+          paint-order="stroke">TUNNEL</text>
 
-    <text x="400" y="705"
+    <text x="500" y="763"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="54" font-weight="900"
+          letter-spacing="5"
+          fill="url(#letterBlue)"
+          stroke="#0966b5" stroke-width="1.5"
+          paint-order="stroke"
+          filter="url(#blueGlow)">TUNNEL</text>
+
+    <!-- Footer separators -->
+    <path d="M250 807 H390 M610 807 H750"
+          stroke="url(#goldMetal)" stroke-width="2"/>
+
+    <path d="M390 807 L415 802 L500 807 L585 802 L610 807"
+          fill="none" stroke="#ffdf7b" stroke-width="2"/>
+
+    <text x="500" y="836"
+          text-anchor="middle"
+          font-family="Arial, Helvetica, sans-serif"
+          font-size="17" font-weight="700"
+          letter-spacing="4"
+          fill="#b8e6ff">SECURE • FAST • PRIVATE</text>
+
+    <!-- Version badge -->
+    <rect x="408" y="853" width="184" height="35" rx="17"
+          fill="#061528" stroke="#1588d2" stroke-width="2"/>
+
+    <text x="500" y="876"
           text-anchor="middle"
           font-family="Arial, Helvetica, sans-serif"
           font-size="15" font-weight="700"
-          letter-spacing="4"
-          fill="#b8dcff">
-      SECURE • FAST • PRIVATE
-    </text>
-
-    <!-- Version badge -->
-    <rect x="322" y="723" width="156" height="30" rx="15"
-          fill="#07162a" stroke="#167fce" stroke-width="1.5"/>
-
-    <text x="400" y="743"
-          text-anchor="middle"
-          font-family="Arial, Helvetica, sans-serif"
-          font-size="14" font-weight="700"
           letter-spacing="2"
-          fill="#75dfff">
-      VERSION 1.0.0
-    </text>
+          fill="#7fe7ff">VERSION 1.0.0</text>
+
   </g>
 
-  <!-- Outer highlight -->
-  <circle cx="400" cy="400" r="368"
-          fill="none" stroke="#fff0ad" stroke-width="2"
+  <!-- Final glossy ring -->
+  <circle cx="500" cy="500" r="474"
+          fill="none" stroke="#fff4b9" stroke-width="2"
           opacity=".85"/>
-  <circle cx="400" cy="400" r="357"
-          fill="none" stroke="#3bbcff" stroke-width="1.5"
-          opacity=".7"/>
+
+  <circle cx="500" cy="500" r="466"
+          fill="none" stroke="#6bdfff" stroke-width="2"
+          opacity=".75"/>
 
 </svg>
