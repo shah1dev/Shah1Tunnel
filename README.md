@@ -27,7 +27,8 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 - **Multiple carriers:** the engine supports ICMP, UDP, TCP, TLS, WebSocket, secure WebSocket, HTTP/2 and gRPC. The best choice depends on what the network path between the two endpoints permits.
 - **TCP and UDP forwarding:** one managed tunnel can carry multiple port mappings, with a different destination port when required.
 - **Interactive manager:** create tunnels, inspect status, review logs, test connectivity, edit mappings and manage updates from a terminal menu.
-- **Automatic selection and carrier bonding:** automatic mode tests usable connection options; supported carriers can also be combined when the route benefits from more than one path.
+- **Automatic selection and carrier bonding:** Auto tests the available connection options. The `Resilient` choice (`r` or `--pick resilient`) bonds every successful direct carrier when at least two pass, otherwise choosing the best measured route.
+- **Multipath recovery:** the engine probes silent bond paths again. During auto-heal, if any direct variant passes a retest, the manager reapplies the prior bond members plus all newly tested-good direct variants so temporarily failing paths can be probed again; if no direct variant passes, it falls back to the best-ranked working route.
 - **Reverse connections:** useful when only one direction can initiate a connection. Reverse support differs by carrier.
 - **Monitoring and recovery:** connection and per-port statistics are available. Supported deployments can automatically bring back a disconnected Iran-side tunnel.
 - **Package verification:** package files are checked against a SHA-256 manifest before execution; the capsule archive and its extraction paths are also validated.
@@ -181,13 +182,15 @@ wattun test NAME
 
 Reverse operation is available for supported TCP-based carriers and ICMP, but `udp` has no reverse mode. For reverse ICMP, test ping reachability from both endpoints before changing the direction.
 
-### Automatic mode
+### Automatic mode and resilient selection
 
 Selecting `auto` during tunnel creation makes the engine test reachable variants and display its results. Run the test again after a network or configuration change with:
 
 ```bash
 wattun auto-test NAME
 ```
+
+In the route-selection screen, press `r` for **Resilient**: if at least two direct carriers pass, they are bonded into one session; otherwise the best measured route is selected. Unattended setup can use `--pick resilient`. The engine probes failed bond paths again. During auto-heal, if any direct variant passes a retest, the manager reapplies the prior bond members plus all newly tested-good direct variants so temporarily failing paths can be probed again; if no direct variant passes, it falls back to the best-ranked working route. Applying a manager-level route change restarts the tunnel and may drop active connections. This uses existing bonding, not a new wire protocol. If all paths are blocked, no route-selection policy can guarantee a connection.
 
 If an auto tunnel on Kharej cannot determine the Iran endpoint's IP, set it manually on Kharej:
 
@@ -317,3 +320,9 @@ In supported configurations, a recovery timer can restart an Iran-side tunnel th
 The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.17` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
+
+### Auto reverse standby (FIX14)
+
+The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively using a direct route, reverse listener ports are not necessarily open all the time; `connection refused` on those standby ports alone does not prove the live direct tunnel is broken. The manager opens the applicable reverse listeners during reverse tests or when switching to reverse. If no direct connection exposes Iran’s public IP, `auto-ip` is the manual fallback.
+
+<!-- FIX14 reverse standby note -->
