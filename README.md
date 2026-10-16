@@ -6,7 +6,15 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 [English](README.md) · [فارسی](README.fa.md)
 
-> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.17`; the installed core version may differ from the Shah Tunnel package version.
+> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.18`; the installed core version may differ from the Shah Tunnel package version.
+
+## Update notes — engine 2.4.18 / manager FIX15
+
+The bundled reference source and installer now track the official 2.4.18 engine. The release improves direct TCP/TLS pool throughput with BBR, acknowledges late-arriving data, extends replay protection on reliable carriers, adds backpressure for full pool queues and exposes per-connection statistics. Speed tests can run several streams at once (`streams=1..32`).
+
+FIX15 keeps Shah1Tunnel's Resilient Auto route recovery and menu behavior, adds a setup warning for WSS/gRPC/H2 configured against a raw peer IP, and updates the installer to verify the SHA-256 sidecar shipped with the official 2.4.18 binary. Existing running tunnels are not restarted automatically. For the full benefit, plan to update and restart both endpoints together.
+
+**Source maintainer note:** the source snapshot and automated test workflow now target Go 1.27.2 or newer. This compiler requirement applies to source tests and builds only; installation and operation use the verified prebuilt engine and do not require Go on the servers.
 
 ## Contents
 
@@ -165,7 +173,7 @@ In this emulated test, GOST used slightly less CPU and multi-flow throughput was
 
 - For a real-world check, keep both endpoints on compatible releases and run `wattun test NAME`.
 - Do not treat emulated-link results as a forecast for a production route. Provider limits, route congestion, ICMP filtering, MTU and firewall rules all affect results.
-- Figures from specific dates and older versions are not performance guarantees for the installed `2.4.17` engine.
+- Figures from specific dates and older versions are not performance guarantees for the installed `2.4.18` engine.
 - For a fair comparison, test the other tools at known versions, on comparable servers, and across the same network route.
 
 ## Reverse and automatic modes
@@ -317,12 +325,12 @@ For an initial diagnosis, run `wattun test NAME`, then check the relevant servic
 
 In supported configurations, a recovery timer can restart an Iran-side tunnel that has remained disconnected for several minutes. It should not restart a tunnel that an administrator intentionally stopped. Check the feature's state in the manager settings.
 
-The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.17` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
+The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.18` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
 
-### Auto reverse standby (FIX14)
+### Auto reverse standby note (preserved in FIX15)
 
 The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively using a direct route, reverse listener ports are not necessarily open all the time; `connection refused` on those standby ports alone does not prove the live direct tunnel is broken. The manager opens the applicable reverse listeners during reverse tests or when switching to reverse. If no direct connection exposes Iran’s public IP, `auto-ip` is the manual fallback.
 
-<!-- FIX14 reverse standby note -->
+<!-- FIX15: retained reverse-standby behavior note -->
