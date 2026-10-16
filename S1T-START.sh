@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# Compatibility: avoid Bash < 5.1 lastpipe job-table bug in installer process/wait handling.
+shopt -u lastpipe 2>/dev/null || true
 
 # Shah1Tunnel packaged runner.
 # Verifies the downloaded/local package, extracts it into a private temporary
