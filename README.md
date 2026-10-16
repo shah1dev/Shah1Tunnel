@@ -8,16 +8,9 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 > **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.18`; the installed core version may differ from the Shah Tunnel package version.
 
-## Update notes — engine 2.4.18 / manager FIX15
-
-The bundled reference source and installer now track the official 2.4.18 engine. The release improves direct TCP/TLS pool throughput with BBR, acknowledges late-arriving data, extends replay protection on reliable carriers, adds backpressure for full pool queues and exposes per-connection statistics. Speed tests can run several streams at once (`streams=1..32`).
-
-FIX15 keeps Shah1Tunnel's Resilient Auto route recovery and menu behavior, adds a setup warning for WSS/gRPC/H2 configured against a raw peer IP, and updates the installer to verify the SHA-256 sidecar shipped with the official 2.4.18 binary. Existing running tunnels are not restarted automatically. For the full benefit, plan to update and restart both endpoints together.
-
-**Source maintainer note:** the source snapshot and automated test workflow now target Go 1.27.2 or newer. This compiler requirement applies to source tests and builds only; installation and operation use the verified prebuilt engine and do not require Go on the servers.
-
 ## Contents
 
+- [What is new in 2.4.18](#what-is-new-in-2418)
 - [Capabilities](#capabilities)
 - [Requirements](#requirements)
 - [Installation](#installation)
@@ -29,6 +22,18 @@ FIX15 keeps Shah1Tunnel's Resilient Auto route recovery and menu behavior, adds 
 - [Management commands](#management-commands)
 - [Configuration and port mapping](#configuration-and-port-mapping)
 - [Monitoring, security and troubleshooting](#monitoring-security-and-troubleshooting)
+
+## What is new in 2.4.18
+
+This package documents the `2.4.18` tunnel engine. The most relevant changes are:
+
+- **Higher throughput for TCP pools:** direct `tcp` and `tls` carriers, along with supported reverse TCP pool modes, can use Linux BBR congestion control (`tcp-cc: bbr`). In one tested reverse-TCP route, eight connections raised upload throughput from roughly 12 MB/s to 47–56 MB/s and download from around 20–30 MB/s to 49–51 MB/s. These are route-specific measurements, not a performance promise.
+- **Fewer needless retransmissions:** the receiver can acknowledge packets that arrive late through a stalled pool connection instead of forcing them to be sent again. The `/stats` output also adds `pool_conns`, with information about each active pool connection, including its age, traffic counters, queue and write-stall time.
+- **More room for non-ICMP carriers:** when `max-mbps` is left at `0`, the default ceiling for TCP-family carriers is raised from 200 to 1250 MB/s per session. Actual throughput remains limited by the network, system resources and other configured limits.
+- **ICMP route tuning:** on the specific Iran–Europe route documented upstream, setting `mtu: 1400` on both endpoints reduced retransmissions and improved transfer rates without raising loaded latency. This is not a universal MTU recommendation. Before changing it, test `ping -M do -s 1372 PEER_IP` and check `ip route get PEER_IP`; do not use the setting if the path cannot carry that packet size. The observed route also became slower when aggregate ICMP tunnel traffic exceeded about 30 MB/s, so treat that figure as route-specific.
+- **Prior stability fixes retained:** version `2.4.17` cleaned up connections left behind after a user's connection closed, while `2.4.16` addressed gradual speed decline in Cloudflare-based tunnels.
+
+For the TCP-pool improvements, update both endpoints and then run `wattun test NAME`. Do not compare a single benchmark across different providers or routes; the result depends on packet loss, latency, MTU, CPU and carrier configuration.
 
 ## Capabilities
 
@@ -151,7 +156,7 @@ Earlier release notes also recorded results under other versions and test setups
 | ICMP with 1400-byte packets and a 30 MB/s cap, 12 October 2026 | About 27.5 MB/s download, 26 MB/s upload, roughly 41 ms ping under load | Specific to that route and cap; test your own path before raising MTU. |
 | Cloudflare/WSS production run on 2.4.6, four sessions and around 250 user connections | Initially about 41 MB/s sustained download; speed tests reached 44–48 MB/s down and up to 82 MB/s up, with around 100 MB RAM per server | The same report noted a drop to about 1 MB/s after roughly three hours, which the 2.4.7 fix did not sustain away in that test. |
 
-Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.17 behavior. Test the currently installed release and your own route.
+Starting with 2.4.11, the TCP-based carriers received further congestion-control changes, so the older Cloudflare result should not be used as a direct prediction of 2.4.18 behavior. Test the currently installed release and your own route.
 
 ### Separate comparison on an emulated link
 
@@ -329,8 +334,7 @@ The Shah Tunnel package verifies files against SHA-256 and checks the core binar
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
 
-### Auto reverse standby note (preserved in FIX15)
+### Reverse standby behavior in Auto mode
 
 The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively using a direct route, reverse listener ports are not necessarily open all the time; `connection refused` on those standby ports alone does not prove the live direct tunnel is broken. The manager opens the applicable reverse listeners during reverse tests or when switching to reverse. If no direct connection exposes Iran’s public IP, `auto-ip` is the manual fallback.
 
-<!-- FIX15: retained reverse-standby behavior note -->
