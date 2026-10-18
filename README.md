@@ -26,7 +26,7 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 ## What is new in 2.5.1
 
-The package now installs the official WatTunnel `2.5.1` engine. This release reduces copying on the send path and reuses 64 KB receive chunks, lowering CPU work and stabilizing memory during large transfers. Upstream reports substantial throughput gains for multi-stream TCP transfers on its test route; that is not a speed guarantee for different servers or networks.
+The package now installs the official Shah Tunnel `2.5.1` engine. This release reduces copying on the send path and reuses 64 KB receive chunks, lowering CPU work and stabilizing memory during large transfers. Upstream reports substantial throughput gains for multi-stream TCP transfers on its test route; that is not a speed guarantee for different servers or networks.
 
 The stream-buffer changes in 2.5.1 do not change the wire format. Large UDP datagram fragmentation was introduced in 2.5.0, however, so update **both endpoints** to 2.5.1 before relying on large UDP packets or WireGuard over the tunnel. The installer verifies the published SHA-256 sidecar and the binary's reported version before replacing an installed engine.
 
