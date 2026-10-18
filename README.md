@@ -6,10 +6,11 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 [English](README.md) · [فارسی](README.fa.md)
 
-> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.4.18`; the installed core version may differ from the Shah Tunnel package version.
+> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.5.1`; the installed core version may differ from the Shah Tunnel package version.
 
 ## Contents
 
+- [What is new in 2.5.1](#what-is-new-in-251)
 - [What is new in 2.4.18](#what-is-new-in-2418)
 - [Capabilities](#capabilities)
 - [Requirements](#requirements)
@@ -22,6 +23,12 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 - [Management commands](#management-commands)
 - [Configuration and port mapping](#configuration-and-port-mapping)
 - [Monitoring, security and troubleshooting](#monitoring-security-and-troubleshooting)
+
+## What is new in 2.5.1
+
+The package now installs the official WatTunnel `2.5.1` engine. This release reduces copying on the send path and reuses 64 KB receive chunks, lowering CPU work and stabilizing memory during large transfers. Upstream reports substantial throughput gains for multi-stream TCP transfers on its test route; that is not a speed guarantee for different servers or networks.
+
+The stream-buffer changes in 2.5.1 do not change the wire format. Large UDP datagram fragmentation was introduced in 2.5.0, however, so update **both endpoints** to 2.5.1 before relying on large UDP packets or WireGuard over the tunnel. The installer verifies the published SHA-256 sidecar and the binary's reported version before replacing an installed engine.
 
 ## What is new in 2.4.18
 
@@ -178,7 +185,7 @@ In this emulated test, GOST used slightly less CPU and multi-flow throughput was
 
 - For a real-world check, keep both endpoints on compatible releases and run `wattun test NAME`.
 - Do not treat emulated-link results as a forecast for a production route. Provider limits, route congestion, ICMP filtering, MTU and firewall rules all affect results.
-- Figures from specific dates and older versions are not performance guarantees for the installed `2.4.18` engine.
+- Figures from specific dates and older versions are not performance guarantees for the installed `2.5.1` engine.
 - For a fair comparison, test the other tools at known versions, on comparable servers, and across the same network route.
 
 ## Reverse and automatic modes
@@ -330,7 +337,7 @@ For an initial diagnosis, run `wattun test NAME`, then check the relevant servic
 
 In supported configurations, a recovery timer can restart an Iran-side tunnel that has remained disconnected for several minutes. It should not restart a tunnel that an administrator intentionally stopped. Check the feature's state in the manager settings.
 
-The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.4.18` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
+The Shah Tunnel package verifies files against SHA-256 and checks the core binary hash for supported `amd64` and `arm64` releases. The current package notes say an installed core at `2.5.1` or newer should not be downgraded. When the same version is already present, the binary can be left in place while the management layer is updated. Active tunnels are not supposed to restart automatically solely because the package is updated; check both endpoints after an update.
 
 **Final note:** test the result on your own servers. Firewalls, ISP filtering, the route, MTU and server capacity can materially change how a tunnel performs.
 
