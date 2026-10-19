@@ -23,6 +23,7 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 - [Management commands](#management-commands)
 - [Configuration and port mapping](#configuration-and-port-mapping)
 - [Monitoring, security and troubleshooting](#monitoring-security-and-troubleshooting)
+- [Automatic peak-time speed optimizer](#automatic-peak-time-speed-optimizer)
 
 ## What is new in 2.5.1
 
@@ -47,6 +48,12 @@ For the TCP-pool improvements, update both endpoints and then run `wattun test N
 Press `p` in the dashboard or run `shah1tun space` to open the SPACE command deck. It adds a read-only Systems Doctor, an IP Protection Audit for spotting direct-path profiles, a panel for the existing auto-heal guardian, a restricted configuration/key/token backup vault, and a Safe Update flow. The update retains existing SHA-256 and actual-version checks, snapshots current configuration, and preserves the previous engine. Restore validates the backup archive and does not restart tunnels without confirmation.
 
 Backups are not encrypted; they are stored with root-only permissions and include key/token material. Keep copies secure. The IP audit is a configuration review, not proof of anonymity or a guarantee against filtering; a domain string alone does not prove traffic is using Cloudflare's proxy path. Existing tunnel-management commands and engine code are retained. Quick commands: `shah1tun doctor`, `shah1tun ip-audit`, `shah1tun backup`, and interactive `shah1tun restore`.
+
+## Automatic peak-time speed optimizer
+
+This package adds a scheduled **Peak-Time Smart Optimizer** to the manager. The systemd timer is enabled after an Iran tunnel is created, or on the next manager invocation on a host that already has one. Link history is recorded every 10 minutes; at low load, a small route check runs at most every two hours. On Auto-token tunnels, a candidate is applied only after winning two consecutive scans, improving measured download-plus-upload by at least 35%, and keeping neither direction more than 10% slower. The current YAML is saved first; after the switch, the manager verifies both reconnection and throughput; if the link or speed check fails, it restores the previous file and attempts rollback.
+
+If the Auto token contains a domain/SNI, active tests only consider verified CDN/ECH routes and fail closed rather than falling back to a direct IP. Without domain/SNI in the token, automatic origin-IP shielding is impossible, and no design can guarantee that an IP will never be filtered. Read the [Peak-Time Optimizer guide](docs/PEAK-TIME-OPTIMIZER.md) for thresholds, commands and limits. Dashboard: `p` → `7`; events: `journalctl -t wattun-peak`.
 
 ## Capabilities
 
@@ -351,3 +358,6 @@ The Shah Tunnel package verifies files against SHA-256 and checks the core binar
 
 The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively using a direct route, reverse listener ports are not necessarily open all the time; `connection refused` on those standby ports alone does not prove the live direct tunnel is broken. The manager opens the applicable reverse listeners during reverse tests or when switching to reverse. If no direct connection exposes Iran’s public IP, `auto-ip` is the manual fallback.
 
+## Emergency camouflage / failover
+
+New Auto tunnels now default to a resilient bond containing all compatible, tested-live carriers, allowing the engine to migrate traffic when one carrier dies. Prepare an existing single-carrier Auto tunnel with `shah1tun` → `p` → `8` → `r`, or `shah1tun auto-resilience NAME`; this one-time, confirmed change restarts that tunnel. If the whole bond dies, quick authenticated probes can scan alternatives after Auto-heal. No new wire protocol is claimed: the feature uses existing carrier bonding and TLS/WSS/gRPC. A complete international blackout with no reachable alternate path cannot be solved by switching. See [the guide](docs/EMERGENCY-FAILOVER.md).
