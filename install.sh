@@ -13,49 +13,76 @@ trap cleanup EXIT
 
 BASE_RAW="https://raw.githubusercontent.com/shah1dev/Shah1Tunnel/main"
 CURL_RETRIES=(--retry 3 --connect-timeout 20 --max-time 300)
+INSTALL_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)" || INSTALL_DIR=''
+SPACE_COLOR=0
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; then SPACE_COLOR=1; fi
+SC=''; SG=''; SR=''; SY=''
+if [ "$SPACE_COLOR" = 1 ]; then SC=$'\e[1;36m'; SG=$'\e[1;32m'; SR=$'\e[0m'; SY=$'\e[1;35m'; fi
+space_header() {
+  printf '  %s╭%s╮%s\n' "$SC" '────────────────────────────────────────────────────────────────────────' "$SR"
+  printf '  %s│%s %s%-70.70s%s %s│%s\n' "$SC" "$SR" "$SC" '✦ SHAH TUNNEL // SPACE INSTALLER · R9K4' "$SR" "$SC" "$SR"
+  printf '  %s│%s %s%-70.70s%s %s│%s\n' "$SC" "$SR" "$SY" 'PREFLIGHT ▸ INTEGRITY ▸ DEPLOYMENT ▸ SYSTEMD' "$SR" "$SC" "$SR"
+  printf '  %s╰%s╯%s\n' "$SC" '────────────────────────────────────────────────────────────────────────' "$SR"
+}
+space_info() { printf '  %s▸%s %s\n' "$SC" "$SR" "$*"; }
+space_ok() { printf '  %s✔%s %s\n' "$SG" "$SR" "$*"; }
+space_error() { printf '  %s✖ SPACE ERROR:%s %s\n' "$SY" "$SR" "$*" >&2; }
 
-echo "Shah1Tunnel installer — temporary workspace: $TMPDIR"
+space_header
+space_info "Bootstrap workspace: $TMPDIR"
 
 for cmd in curl sha256sum awk tar bash; do
   command -v "$cmd" >/dev/null 2>&1 || {
-    echo "Required command not found: $cmd" >&2; exit 1;
+    space_error "Required command not found: $cmd"; exit 1;
   }
 done
 
 mkdir -p "$TMPDIR/S1T-CAPSULE"
 
-echo 'Downloading manifest and installer files...'
-curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CHECKS.sha256" -o "$TMPDIR/S1T-CHECKS.sha256" || {
-  echo 'Failed to download S1T-CHECKS.sha256' >&2; exit 1;
-}
-curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-START.sh" -o "$TMPDIR/S1T-START.sh" || {
-  echo 'Failed to download S1T-START.sh' >&2; exit 1;
-}
-curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-INFO-FA.txt" -o "$TMPDIR/S1T-INFO-FA.txt" || {
-  echo 'Failed to download S1T-INFO-FA.txt' >&2; exit 1;
-}
-
-echo 'Downloading capsule archive...'
-if curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CAPSULE/S1T-SOURCE.tar.gz" -o "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz"; then
-  :
-elif curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CAPSULE/null" -o "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz"; then
-  :
+# A full extracted ZIP uses its checked-in capsule; the one-line remote bootstrap
+# has no adjacent package and therefore downloads the current checked bundle.
+if [[ -n "$INSTALL_DIR" && -s "$INSTALL_DIR/S1T-CHECKS.sha256" && \
+      -s "$INSTALL_DIR/S1T-START.sh" && -s "$INSTALL_DIR/S1T-INFO-FA.txt" && \
+      -s "$INSTALL_DIR/S1T-CAPSULE/S1T-SOURCE.tar.gz" ]]; then
+  space_info 'Local Shah Tunnel package detected; using the bundled SPACE interface.'
+  cp -- "$INSTALL_DIR/S1T-CHECKS.sha256" "$TMPDIR/S1T-CHECKS.sha256" || { space_error 'Could not copy the local checksum manifest.'; exit 1; }
+  cp -- "$INSTALL_DIR/S1T-START.sh" "$TMPDIR/S1T-START.sh" || { space_error 'Could not copy the local runner.'; exit 1; }
+  cp -- "$INSTALL_DIR/S1T-INFO-FA.txt" "$TMPDIR/S1T-INFO-FA.txt" || { space_error 'Could not copy local package notes.'; exit 1; }
+  cp -- "$INSTALL_DIR/S1T-CAPSULE/S1T-SOURCE.tar.gz" "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz" || { space_error 'Could not copy the local source capsule.'; exit 1; }
 else
-  echo 'Capsule archive not found (tried S1T-CAPSULE/S1T-SOURCE.tar.gz and S1T-CAPSULE/null).' >&2
-  exit 1
+  space_info '01/03 · Downloading package manifest and startup files.'
+  curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CHECKS.sha256" -o "$TMPDIR/S1T-CHECKS.sha256" || {
+    space_error 'Failed to download S1T-CHECKS.sha256'; exit 1;
+  }
+  curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-START.sh" -o "$TMPDIR/S1T-START.sh" || {
+    space_error 'Failed to download S1T-START.sh'; exit 1;
+  }
+  curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-INFO-FA.txt" -o "$TMPDIR/S1T-INFO-FA.txt" || {
+    space_error 'Failed to download S1T-INFO-FA.txt'; exit 1;
+  }
+
+  space_info '02/03 · Downloading the source capsule.'
+  if curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CAPSULE/S1T-SOURCE.tar.gz" -o "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz"; then
+    :
+  elif curl -fsSL "${CURL_RETRIES[@]}" "$BASE_RAW/S1T-CAPSULE/null" -o "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz"; then
+    :
+  else
+    space_error 'Capsule archive could not be downloaded (checked primary and compatibility paths).'
+    exit 1
+  fi
 fi
 
 # Prevent an empty or incomplete manifest from being treated as valid.
 for expected in S1T-START.sh S1T-INFO-FA.txt S1T-CAPSULE/S1T-SOURCE.tar.gz; do
   if ! awk -v want="$expected" '$2 == want { found=1 } END { exit !found }' "$TMPDIR/S1T-CHECKS.sha256"; then
-    echo "Checksum manifest is missing required entry: $expected" >&2
+    space_error "Checksum manifest is missing required entry: $expected"
     exit 1
   fi
 done
 
-echo 'Verifying package integrity...'
-if (cd -- "$TMPDIR" && sha256sum --strict -c S1T-CHECKS.sha256); then
-  echo 'Integrity verified.'
+space_info '03/03 · Verifying package checksums and archive integrity.'
+if (cd -- "$TMPDIR" && sha256sum --strict --status -c S1T-CHECKS.sha256); then
+  space_ok 'Package integrity verified.'
 else
   echo 'Checksum verification failed. Installation stopped; no package code was executed.' >&2
   exit 2
@@ -68,5 +95,5 @@ if ! tar -tzf "$TMPDIR/S1T-CAPSULE/S1T-SOURCE.tar.gz" >/dev/null; then
   exit 2
 fi
 
-echo 'Extracting and running installer...'
+space_info 'Launching SPACE deployment sequence.'
 ( cd -- "$TMPDIR" && bash ./S1T-START.sh )

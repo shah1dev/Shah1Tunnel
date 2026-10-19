@@ -11,8 +11,20 @@ HERE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CHECKS="$HERE/S1T-CHECKS.sha256"
 ARCHIVE="$HERE/S1T-CAPSULE/S1T-SOURCE.tar.gz"
 
-err(){ printf '[Shah1Tunnel] ERROR: %s\n' "$*" >&2; }
-info(){ printf '[Shah1Tunnel] %s\n' "$*"; }
+SPACE_COLOR=0
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; then SPACE_COLOR=1; fi
+SC=''; SG=''; SR=''; SY=''
+if [ "$SPACE_COLOR" = 1 ]; then SC=$'\e[1;36m'; SG=$'\e[1;32m'; SR=$'\e[0m'; SY=$'\e[1;35m'; fi
+space_header() {
+  printf '  %s╭%s╮%s\n' "$SC" '────────────────────────────────────────────────────────────────────────' "$SR"
+  printf '  %s│%s %s%-70.70s%s %s│%s\n' "$SC" "$SR" "$SC" '✦ SHAH TUNNEL // SPACE DEPLOYMENT' "$SR" "$SC" "$SR"
+  printf '  %s│%s %s%-70.70s%s %s│%s\n' "$SC" "$SR" "$SY" 'PACKAGE CHECK ▸ WORKSPACE ▸ SOURCE RESTORE ▸ INSTALL' "$SR" "$SC" "$SR"
+  printf '  %s╰%s╯%s\n' "$SC" '────────────────────────────────────────────────────────────────────────' "$SR"
+}
+err(){ printf '%b✖ SPACE ERROR:%b %s\n' "$SY" "$SR" "$*" >&2; }
+info(){ printf '%b▸%b %s\n' "$SC" "$SR" "$*"; }
+ok(){ printf '%b✔%b %s\n' "$SG" "$SR" "$*"; }
+space_header
 
 [[ -f "$CHECKS" && -f "$ARCHIVE" && -f "$HERE/S1T-INFO-FA.txt" ]] || {
   err 'package files are missing.'; exit 2;
@@ -31,7 +43,7 @@ if ! (cd -- "$HERE" && sha256sum --status -c S1T-CHECKS.sha256); then
   err 'package checksum verification failed; nothing was executed.'
   exit 2
 fi
-info 'Package checksums verified.'
+ok 'Package checksums verified.'
 
 # Workspace allocation: prefer disk-backed paths and require at least 16 MiB.
 WORK=''
@@ -54,7 +66,7 @@ cleanup(){ local rc=$?; rm -rf -- "$WORK"; return "$rc"; }
 trap cleanup EXIT
 
 info "Using workspace: $WORK"
-info 'Checking archive paths...'
+info 'Checking capsule paths and safety boundaries...'
 if ! tar -tzf "$ARCHIVE" >/dev/null 2>&1; then
   err 'capsule archive is corrupt or unreadable.'; exit 2
 fi
@@ -65,7 +77,7 @@ while IFS= read -r member; do
   esac
 done < <(tar -tzf "$ARCHIVE")
 
-info 'Extracting package...'
+info 'Restoring secure source workspace...'
 if ! tar -xzf "$ARCHIVE" -C "$WORK"; then
   err 'failed to extract capsule archive.'; exit 2
 fi
@@ -111,9 +123,9 @@ root="$WORK/Shah1Tunnel-Core"
   exit 2
 }
 
-info 'Capsule paths restored and required files verified.'
+ok 'Capsule paths restored and required files verified.'
 info 'Running packaged installer...'
 ( cd -- "$root" && bash ./install.sh ) || {
   err 'packaged installer failed; see the error above.'; exit 2;
 }
-info 'Packaged installer finished.'
+ok 'Packaged installer finished.'

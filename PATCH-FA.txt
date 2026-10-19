@@ -26,3 +26,9 @@ Shah1Tunnel — Installer FIX16 / Manager FIX17 — اصلاح پایداری ن
 - Tunnel Guardian از Auto-heal موجود استفاده می‌کند؛ سرویس نگهبان جدا یا منطق بازیابی تکراری ساخته نشده است.
 - Backup/Restore Vault از تنظیمات، کلیدها، توکن‌ها و تنظیمات مدیر آرشیو محدودشده می‌سازد؛ این آرشیو رمزگذاری نشده و باید محرمانه نگه داشته شود. پیش از بازیابی ساختارش بررسی می‌شود و restart بی‌اجازه انجام نمی‌شود.
 - به‌روزرسانی پس از تأیید SHA-256 و نسخهٔ واقعی، ابتدا snapshot تنظیمات را می‌گیرد و سپس باینری قبلی را حفظ می‌کند. نسخهٔ موتور همچنان 2.5.1 است.
+
+FIX17 SPACE UI CONSISTENCY PATCH (2026-10-19)
+- Applied a shared SPACE COMMAND HUD to all interactive manager pages, not only the p/SPACE hub.
+- Unified setup wizard, settings, tunnel review, maintenance and install-summary framing.
+- Kept six-block checklist progress, added the same spacecraft visual treatment to bootstrap/download/checksum/runner stages.
+- Changed only presentation helpers and installer local-package selection; tunnel/control logic, protocol behavior and existing menu actions were preserved.
