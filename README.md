@@ -6,7 +6,7 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 [English](README.md) · [فارسی](README.fa.md)
 
-> **Tunnel engine:** this package compiles the bundled `2.5.2-dns-rescue` source, runs Go tests, and atomically installs the built engine. Installation temporarily requires access to `go.dev` and `proxy.golang.org`, plus about 1 GiB free disk space; install before an outage.
+> **Tunnel engine:** Shah Tunnel provides packaging, integrity checks, setup and management adjustments. The package information identifies core version `2.5.1`; the installed core version may differ from the Shah Tunnel package version.
 
 ## Contents
 
@@ -27,9 +27,9 @@ Shah Tunnel is a setup and management layer for creating a tunnel between two Li
 
 ## What is new in 2.5.1
 
-Historical note on the upstream Shah Tunnel `2.5.1` base: that release reduces copying on the send path and reuses 64 KB receive chunks, lowering CPU work and stabilizing memory during large transfers. The current package instead builds the `2.5.2-dns-rescue` fork and adds the DNS emergency carrier. Upstream reports substantial throughput gains for multi-stream TCP transfers on its test route; that is not a speed guarantee for different servers or networks.
+The package now installs the official Shah Tunnel `2.5.1` engine. This release reduces copying on the send path and reuses 64 KB receive chunks, lowering CPU work and stabilizing memory during large transfers. Upstream reports substantial throughput gains for multi-stream TCP transfers on its test route; that is not a speed guarantee for different servers or networks.
 
-The stream-buffer changes in 2.5.1 do not change the wire format. Large UDP datagram fragmentation was introduced in 2.5.0, however, so update **both endpoints** to 2.5.1 before relying on large UDP packets or WireGuard over the tunnel. The current installer runs source tests, builds the custom engine, and verifies its resulting version and local SHA-256 before replacing the installed binary.
+The stream-buffer changes in 2.5.1 do not change the wire format. Large UDP datagram fragmentation was introduced in 2.5.0, however, so update **both endpoints** to 2.5.1 before relying on large UDP packets or WireGuard over the tunnel. The installer verifies the published SHA-256 sidecar and the binary's reported version before replacing an installed engine.
 
 ## What is new in 2.4.18
 
@@ -361,12 +361,3 @@ The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively 
 ## Emergency camouflage / failover
 
 New Auto tunnels and re-tests of existing Auto tunnels now prefer resilient multi-carrier selection from routes that actually tested live. An enabled Auto-heal timer checks every 15 seconds; after three consecutive failures it restarts the tunnel and, if still down after about four seconds, probes alternatives (at most once per tunnel every 60 seconds). To prepare an existing single-carrier Auto tunnel manually, use `shah1tun` → `p` → `8` → `r`; this confirmed one-time change restarts the tunnel. REALITY, Hysteria 2 and Trojan are not native carriers in this release. No software switch can solve a complete international blackout if no alternate path remains reachable. See [the recovery guide](docs/EMERGENCY-FAILOVER.md) and [protocol strategy guide](docs/PROTOCOL-FAILOVER-STRATEGY.md).
-
-
-## DNS emergency carrier through CottenDNS — 2.5.2-dns-rescue
-
-This version adds a real `dns` carrier to the engine. It uses the existing TCP pool: the Iran side dials the local CottenDNS listener at `127.0.0.1:18001`, while the overseas CottenDNS server forwards the stream to the Shah1Tunnel loopback listener on the port shown by the SPACE configuration menu. In bonded mode, DNS is selected only when all normal carriers are unhealthy; it fails back when ACKs return over a normal carrier.
-
-CottenDNS must be installed and configured separately on both servers. Use `shah1tun` → `p` → `9` → `c` on each matching tunnel; on Kharej, set the printed port as `FORWARD_PORT` and `127.0.0.1` as `FORWARD_IP`; on Iran run the CottenDNS client in `PROTOCOL_TYPE=TCP`, `LISTEN_IP=127.0.0.1`, `LISTEN_PORT=18001` mode. Both Shah1Tunnel configs must list carriers in the same order. Restart services only after both endpoints are configured and in a maintenance window.
-
-**Real limits:** this works only if at least one resolver can still reach the delegated subdomain on the overseas server. It cannot restore a totally severed DNS route, and DNS tunnelling is much slower than normal carriers, so treat it as emergency/minimal connectivity rather than a bulk-download path. The source build must also be completed before the outage, while Go and its modules can be downloaded.
