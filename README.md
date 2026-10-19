@@ -42,6 +42,12 @@ This package documents the `2.4.18` tunnel engine. The most relevant changes are
 
 For the TCP-pool improvements, update both endpoints and then run `wattun test NAME`. Do not compare a single benchmark across different providers or routes; the result depends on packet loss, latency, MTU, CPU and carrier configuration.
 
+## SPACE Operations Center (additive manager tools)
+
+Press `p` in the dashboard or run `shah1tun space` to open the SPACE command deck. It adds a read-only Systems Doctor, an IP Protection Audit for spotting direct-path profiles, a panel for the existing auto-heal guardian, a restricted configuration/key/token backup vault, and a Safe Update flow. The update retains existing SHA-256 and actual-version checks, snapshots current configuration, and preserves the previous engine. Restore validates the backup archive and does not restart tunnels without confirmation.
+
+Backups are not encrypted; they are stored with root-only permissions and include key/token material. Keep copies secure. The IP audit is a configuration review, not proof of anonymity or a guarantee against filtering; a domain string alone does not prove traffic is using Cloudflare's proxy path. Existing tunnel-management commands and engine code are retained. Quick commands: `shah1tun doctor`, `shah1tun ip-audit`, `shah1tun backup`, and interactive `shah1tun restore`.
+
 ## Capabilities
 
 - **Multiple carriers:** the engine supports ICMP, UDP, TCP, TLS, WebSocket, secure WebSocket, HTTP/2 and gRPC. The best choice depends on what the network path between the two endpoints permits.
