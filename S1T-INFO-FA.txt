@@ -1,4 +1,6 @@
-Shah1Tunnel R9K4 — Official Shah Tunnel v2.5.1 / Manager FIX17 / Installer FIX16
+Shah1Tunnel R9K4 — Official Shah Tunnel v2.5.1 / Manager FIX21 / Installer FIX20
+
+سیاست فعال انتخاب مسیر در FIX20: Enter بهترین مسیر تکیِ اندازه‌گیری‌شده؛ b برای Bond مستقیم‌های سالم؛ r برای Resilient؛ c برای ترکیب دستی ردیف‌های سالم؛ f برای انتخاب تعاملی نوع ناموفق با پذیرش ریسک؛ s فقط برای مسیر محافظت‌شدهٔ تأییدشده؛ q برای لغو. گزینهٔ غیرتعاملی `--pick 1,3` ردیف‌های سازگار و سالم را ترکیب می‌کند. یادداشت‌های FIXهای قدیمی‌تر در ادامه، تاریخچهٔ تغییرات قبلی هستند و در صورت تعارض، این سیاست FIX20 ملاک است.
 
 این بسته با انتشار رسمی هستهٔ Shah Tunnel نسخهٔ 2.5.1 هماهنگ شده است. نصب‌کننده باینری متناظر linux/amd64 یا linux/arm64 را به همراه فایل SHA-256 همان انتشار دریافت و پیش از نصب بررسی می‌کند؛ شمارهٔ نسخه نیز جداگانه کنترل می‌شود.
 
@@ -47,11 +49,11 @@ SPACE UI (این بسته): رابط فضایی فقط به منوی p محدو�
 
 ## رفتار نسخهٔ اصلاح‌شده
 
-هستهٔ 2.5.1 قابلیت Bonding واقعی دارد: یک نشست می‌تواند هم‌زمان روی چند حامل اجرا شود؛ هر مسیر با ACK/PING پایش می‌شود و وقتی یکی قطع شود، زمان‌بندی بسته‌ها به مسیرهای زنده منتقل می‌شود. بازیابی در این نسخه فقط «بعد از قطع، کانفیگ را عوض کن» نیست؛ برای Autoهای تازه، انتخاب پیش‌فرض به‌صورت یک مجموعه از حامل‌های سازگار و تست‌شده است. اگر تنها یک حامل جواب دهد، همان مسیر برگزیده می‌شود.
+هستهٔ 2.5.1 قابلیت Bonding واقعی دارد: یک نشست می‌تواند هم‌زمان روی چند حامل اجرا شود؛ هر مسیر با ACK/PING پایش می‌شود و وقتی یکی قطع شود، زمان‌بندی بسته‌ها به مسیرهای زنده منتقل می‌شود. بازیابی در این نسخه فقط «بعد از قطع، کانفیگ را عوض کن» نیست؛ برای Autoهای تازه، انتخاب پیش‌فرض بهترین مسیر تکی بر اساس سرعت اندازه‌گیری‌شده است؛ Bond چندحاملی فقط با انتخاب صریح فعال می‌شود. اگر تنها یک حامل جواب دهد، همان مسیر برگزیده می‌شود.
 
 برای Autoهای قبلی که هنوز با یک حامل اجرا می‌شوند، در مدیر `shah1tun` وارد `p` سپس `8` شوید و `r` را بزنید؛ نام تونل ایران را وارد کنید. یا از ترمینال `shah1tun auto-resilience NAME` را اجرا کنید. مدیر مسیرها را با تست سریع اتصال احراز‌شده بررسی می‌کند و در صورت یافتن دست‌کم دو حامل سازگار، پیش از اعمال تغییر تأیید می‌گیرد. این آماده‌سازی یک‌باره سرویس را restart می‌کند و ممکن است اتصال‌های فعال لحظه‌ای دوباره وصل شوند؛ پس از آن، خرابی یک حامل لزوماً نیاز به restart سرویس ندارد.
 
-وقتی کل Bond هم از دسترس خارج شود، Auto-heal موجود پس از سه بررسی ناموفقِ متوالی (تایمر فعال هر ۱۵ ثانیه اجرا می‌شود) سرویس را restart می‌کند. اگر بعد از حدود ۴ ثانیه اتصال برنگردد، یک اسکن سریعِ مسیرهای جایگزین در واحد جداگانهٔ systemd اجرا می‌شود؛ این اسکن به‌جای تست دانلود/آپلود طولانی، اتصال و RTT را می‌سنجد. برای جلوگیری از اسکن مداوم، هر تونل حداکثر یک اسکن اضطراری در ۶۰ ثانیه دارد.
+وقتی کل Bond هم از دسترس خارج شود، Auto-heal موجود پس از سه بررسی ناموفقِ متوالی (تایمر فعال هر ۱۵ ثانیه اجرا می‌شود) سرویس را restart می‌کند. اگر بعد از حدود ۴ ثانیه اتصال برنگردد، یک اسکن سریعِ مسیرهای جایگزین در واحد جداگانهٔ systemd اجرا می‌شود؛ این اسکن با تست کوتاه دانلود/آپلود، مسیرهای جایگزین را رتبه‌بندی می‌کند. برای جلوگیری از اسکن مداوم، هر تونل حداکثر یک اسکن اضطراری در ۳۰ دقیقه دارد.
 
 ## «پروتکل جعلی» و پوشش مبدأ
 
@@ -84,11 +86,11 @@ systemctl status wattun-heal.timer --no-pager
 
 ## رفتار نسخهٔ اصلاح‌شده
 
-هستهٔ 2.5.1 قابلیت Bonding واقعی دارد: یک نشست می‌تواند هم‌زمان روی چند حامل اجرا شود؛ هر مسیر با ACK/PING پایش می‌شود و وقتی یکی قطع شود، زمان‌بندی بسته‌ها به مسیرهای زنده منتقل می‌شود. بازیابی در این نسخه فقط «بعد از قطع، کانفیگ را عوض کن» نیست؛ برای Autoهای تازه، انتخاب پیش‌فرض به‌صورت یک مجموعه از حامل‌های سازگار و تست‌شده است. اگر تنها یک حامل جواب دهد، همان مسیر برگزیده می‌شود.
+هستهٔ 2.5.1 قابلیت Bonding واقعی دارد: یک نشست می‌تواند هم‌زمان روی چند حامل اجرا شود؛ هر مسیر با ACK/PING پایش می‌شود و وقتی یکی قطع شود، زمان‌بندی بسته‌ها به مسیرهای زنده منتقل می‌شود. بازیابی در این نسخه فقط «بعد از قطع، کانفیگ را عوض کن» نیست؛ برای Autoهای تازه، انتخاب پیش‌فرض بهترین مسیر تکی بر اساس سرعت اندازه‌گیری‌شده است؛ Bond چندحاملی فقط با انتخاب صریح فعال می‌شود. اگر تنها یک حامل جواب دهد، همان مسیر برگزیده می‌شود.
 
 برای Autoهای قبلی که هنوز با یک حامل اجرا می‌شوند، در مدیر `shah1tun` وارد `p` سپس `8` شوید و `r` را بزنید؛ نام تونل ایران را وارد کنید. یا از ترمینال `shah1tun auto-resilience NAME` را اجرا کنید. مدیر مسیرها را با تست سریع اتصال احراز‌شده بررسی می‌کند و در صورت یافتن دست‌کم دو حامل سازگار، پیش از اعمال تغییر تأیید می‌گیرد. این آماده‌سازی یک‌باره سرویس را restart می‌کند و ممکن است اتصال‌های فعال لحظه‌ای دوباره وصل شوند؛ پس از آن، خرابی یک حامل لزوماً نیاز به restart سرویس ندارد.
 
-وقتی کل Bond هم از دسترس خارج شود، Auto-heal موجود پس از سه بررسی ناموفقِ متوالی (تایمر فعال هر ۱۵ ثانیه اجرا می‌شود) سرویس را restart می‌کند. اگر بعد از حدود ۴ ثانیه اتصال برنگردد، یک اسکن سریعِ مسیرهای جایگزین در واحد جداگانهٔ systemd اجرا می‌شود؛ این اسکن به‌جای تست دانلود/آپلود طولانی، اتصال و RTT را می‌سنجد. برای جلوگیری از اسکن مداوم، هر تونل حداکثر یک اسکن اضطراری در ۶۰ ثانیه دارد.
+وقتی کل Bond هم از دسترس خارج شود، Auto-heal موجود پس از سه بررسی ناموفقِ متوالی (تایمر فعال هر ۱۵ ثانیه اجرا می‌شود) سرویس را restart می‌کند. اگر بعد از حدود ۴ ثانیه اتصال برنگردد، یک اسکن سریعِ مسیرهای جایگزین در واحد جداگانهٔ systemd اجرا می‌شود؛ این اسکن با تست کوتاه دانلود/آپلود، مسیرهای جایگزین را رتبه‌بندی می‌کند. برای جلوگیری از اسکن مداوم، هر تونل حداکثر یک اسکن اضطراری در ۳۰ دقیقه دارد.
 
 ## «پروتکل جعلی» و پوشش مبدأ
 
@@ -120,8 +122,8 @@ systemctl status wattun-heal.timer --no-pager
 اصلاح تکمیلی: مدیریت قطع اینترنت / 2026-10
 -----------------------------------------
 - تایمر Auto-heal فعال: بررسی هر 15 ثانیه؛ سه شکست متوالی، Restart تونل و سپس probe سریع در صورت ادامهٔ قطعی.
-- اسکن مسیر جایگزین: محدودیت هر تونل 60 ثانیه.
-- Auto-test برای تونل‌های Auto موجود، Bond چندحاملی را پیش‌فرض می‌گیرد؛ انتخاب دستی مسیر تکی همچنان موجود است.
+- اسکن مسیر جایگزین: محدودیت هر تونل 30 دقیقه.
+- Auto-test برای تونل‌های Auto موجود، بهترین مسیر تکیِ اندازه‌گیری‌شده را پیش‌فرض می‌گیرد؛ Bond چندحاملی انتخاب صریح است.
 - افزوده‌شدن docs/PROTOCOL-FAILOVER-STRATEGY.fa.md و docs/PROTOCOL-FAILOVER-STRATEGY.md.
 - Reality، Hysteria 2 و Trojan به موتور/Carrierها اضافه نشده‌اند؛ مستندات ادعاهای نادرست متن ورودی را تصحیح می‌کنند.
 - بررسی انجام‌شده: Bash syntax، صحت SHA-256 بسته و سلامت آرشیو؛ تست شبکهٔ زنده یا build کامل Go انجام نشده است.
@@ -132,3 +134,11 @@ FIX18 — Auto-route compatibility and speed stability (2026-10-21)
 - Changed emergency retest to measure short download/upload throughput before switching, rather than ranking all authenticated handshakes as if they had equal throughput.
 - Peak-Time Optimizer is opt-in; a legacy timer without the new explicit opt-in marker is disabled once on the next manager invocation. The existing SPACE toggle remains available.
 - Shell syntax checked. The package was not tested on the user's live VPS pair; actual throughput still depends on carrier, route, packet loss, MTU, CPU and provider filtering.
+
+
+FIX20 · WatTunnel route-selection parity while preserving SPACE UI:
+- Interactive Auto route menu includes Enter=best measured single route, b=working direct bond, r=resilient choice, c=manual row combination, f=force a failed row after risk warning, and q=cancel. Verified protected CDN/ECH selection remains separate and never falls back to origin IP.
+- Non-interactive selection supports --pick N,N... for explicitly joining compatible successful rows. Reverse routes and duplicate carrier types are rejected from a joined tunnel. Forced failed routes remain interactive only.
+- Auto-heal performs short throughput-ranked re-tests and changes route only when needed; scan throttling matches the WatTunnel 30-minute policy.
+- Online bootstrap now pins manifest, runner, notes and source capsule to one immutable Git commit; checksum failures print per-file results. Full-ZIP installation uses the bundled capsule.
+- SPACE manager/interface and token/service formats are retained. Package integrity and shell syntax checks are performed for this bundle; no live throughput guarantee is claimed.

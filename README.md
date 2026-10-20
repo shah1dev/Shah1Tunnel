@@ -78,6 +78,17 @@ Real-world throughput depends on the route, latency, packet loss, network filter
 
 ## Installation
 
+### Install the bundled ZIP
+
+Extract the complete ZIP, then run this from the extracted package root:
+
+```bash
+cd Shah1Tunnel-main
+bash install.sh
+```
+
+The installer should print `Local Shah Tunnel package detected`. If it instead starts with the `01/03` download step, you are running the online bootstrap, not the locally bundled package.
+
 ### Online install
 
 Run this command on both servers:
@@ -223,7 +234,7 @@ Selecting `auto` during tunnel creation makes the engine test reachable variants
 wattun auto-test NAME
 ```
 
-During the Auto check, origin-IP protection is enabled by default at the prompt. Press Enter to test only verified Cloudflare/ECH edges, without probing the origin’s direct IP. If no verified edge passes, protected mode stops instead of falling back to a direct route. It requires a Cloudflare-proxied domain and an Auto token containing SNI; it cannot guarantee that the CDN itself will not be blocked. In the route-selection screen, Enter selects the best measured single route. Press `r` for **Resilient** or use `--pick resilient` to explicitly bond compatible routes; a bond may improve resilience but can be slower if one member is poor. The engine probes failed members of an explicitly configured bond. During auto-heal, alternate routes are ranked by short download/upload tests; when a replacement is necessary, the best measured single route is selected. Applying a manager-level route change restarts the tunnel and may drop active connections. This uses existing bonding, not a new wire protocol. If all paths are blocked, no route-selection policy can guarantee a connection.
+During the Auto check, origin-IP protection is enabled by default at the prompt. Press Enter to test only verified Cloudflare/ECH edges, without probing the origin’s direct IP. If no verified edge passes, protected mode stops instead of falling back to a direct route. It requires a Cloudflare-proxied domain and an Auto token containing SNI; it cannot guarantee that the CDN itself will not be blocked. In the route-selection screen, Enter selects the best measured single route. Use `b` to bond direct carriers, `r` for **Resilient**, `c` to combine chosen healthy rows, and `f` to force a failed type after accepting the risk (`q` cancels); non-interactive setup can combine healthy rows with `--pick 1,3`. A bond may improve resilience but can be slower if one member is poor. The engine probes failed members of an explicitly configured bond. During auto-heal, alternate routes are ranked by short download/upload tests; when a replacement is necessary, the best measured single route is selected. Applying a manager-level route change restarts the tunnel and may drop active connections. This uses existing bonding, not a new wire protocol. If all paths are blocked, no route-selection policy can guarantee a connection.
 
 If an auto tunnel on Kharej cannot determine the Iran endpoint's IP, set it manually on Kharej:
 
@@ -360,4 +371,4 @@ The `NAME-r` unit on Kharej is the reverse standby path. While Iran is actively 
 
 ## Emergency camouflage / failover
 
-New Auto tunnels and interactive re-tests default to the best measured single route; multi-carrier Bond/Resilient remains an explicit choice. An enabled Auto-heal timer checks every 15 seconds; after three consecutive failures it restarts the tunnel and, if still down after about four seconds, probes alternatives (at most once per tunnel every 60 seconds). To prepare an existing single-carrier Auto tunnel manually, use `shah1tun` → `p` → `8` → `r`; this confirmed one-time change restarts the tunnel. REALITY, Hysteria 2 and Trojan are not native carriers in this release. No software switch can solve a complete international blackout if no alternate path remains reachable. See [the recovery guide](docs/EMERGENCY-FAILOVER.md) and [protocol strategy guide](docs/PROTOCOL-FAILOVER-STRATEGY.md).
+New Auto tunnels and interactive re-tests default to the best measured single route; multi-carrier Bond/Resilient remains an explicit choice. An enabled Auto-heal timer checks every 15 seconds; after three consecutive failures it restarts the tunnel and, if still down after about four seconds, probes alternatives (at most once per tunnel every 30 minutes). To prepare an existing single-carrier Auto tunnel manually, use `shah1tun` → `p` → `8` → `r`; this confirmed one-time change restarts the tunnel. REALITY, Hysteria 2 and Trojan are not native carriers in this release. No software switch can solve a complete international blackout if no alternate path remains reachable. See [the recovery guide](docs/EMERGENCY-FAILOVER.md) and [protocol strategy guide](docs/PROTOCOL-FAILOVER-STRATEGY.md).
