@@ -13,7 +13,7 @@ Shah1Tunnel R9K4 — Official Shah Tunnel v2.5.1 / Manager FIX17 / Installer FIX
 - ارسال مجدد سریع‌تر پس از خرابی اتصال pool و جزئیات آماری بیشتر برای هر اتصال.
 - تست سرعت با پارامتر streams و سقف پیش‌فرض افزایش‌یافته برای حامل‌های غیر ICMP.
 
-FIX17: قابلیت Resilient Auto و تغییرهای منوی نسخهٔ قبلی حفظ شده‌اند؛ هشدار استفاده از IP خام با WSS/gRPC/H2 اضافه شده و نسخهٔ مدیر به‌روزرسانی شده است تا بستهٔ جدید به‌عنوان مدیر قدیمی رد نشود.
+FIX17: قابلیت Resilient Auto به‌صورت انتخاب دستی، محافظت از IP مبدأ و تغییرهای منوی نسخهٔ قبلی حفظ شده‌اند؛ هشدار استفاده از IP خام با WSS/gRPC/H2 اضافه شده و نسخهٔ مدیر به‌روزرسانی شده است.
 
 Installer FIX16: تست فضای موقت ۱۶ مگابایت، انتخاب فضای موقت تازه در صورت خطای نوشتن curl (کد ۲۳)، تلاش جایگزین با wget و پشتیبانی اختیاری از WAT_PROXY حفظ شده است. نصب‌کننده و دستور به‌روزرسانی مدیر اکنون انتشار رسمی 2.5.1 را با SHA-256 همان انتشار و شماره نسخه بررسی می‌کنند.
 
@@ -28,16 +28,16 @@ Installer FIX16: تست فضای موقت ۱۶ مگابایت، انتخاب ف�
 SPACE UI (این بسته): رابط فضایی فقط به منوی p محدود نیست. سربرگ و رنگ‌بندی یکپارچه از مرحلهٔ آغاز نصب و بررسی بسته تا داشبورد اصلی، ساخت و تنظیم تونل، صفحات لاگ، تنظیمات، Doctor، بررسی IP، بازیابی و به‌روزرسانی به کار رفته است. نشانگرهای انتظار و نوار پیشرفت شش‌قسمتی حفظ شده‌اند. تغییرات رابط کاربری‌اند؛ منطق موتور، انتخاب حامل‌ها، قالب توکن‌ها و رفتار تونل دست‌کاری نشده است. اجرای مستقیم install.sh از پوشهٔ بسته از فایل‌های همان بسته استفاده می‌کند؛ نصب یک‌خطی از مخزن همچنان بستهٔ منتشرشده در GitHub را دریافت می‌کند.
 
 بهینه‌ساز افزودهٔ FIX17 (Peak-Time Smart Optimizer):
-- تایمر systemd به‌طور خودکار پس از ایجاد تونل ایران یا اجرای بعدی مدیر روی سرور دارای تونل ایران فعال می‌شود. هر ۱۰ دقیقه تاریخچهٔ RTT، نرخ، loss و retransmission نگهداری می‌شود و حداکثر هر دو ساعت در بار کم تست مسیر انجام می‌شود.
+- تایمر systemd در FIX18 دیگر به‌طور خودکار فعال نمی‌شود؛ مدیر می‌تواند آن را از منوی SPACE به‌صورت اختیاری روشن کند. در حالت فعال، هر ۱۰ دقیقه تاریخچهٔ RTT، نرخ، loss و retransmission نگهداری می‌شود و حداکثر هر دو ساعت در بار کم تست مسیر انجام می‌شود.
 - مسیر خودکار فقط پس از دو برد متوالی، بهبود دست‌کم ۳۵٪ در مجموع دانلود+آپلود و بدون افت بیش از ۱۰٪ در هیچ جهت اعمال می‌شود. قبل از تغییر YAML حفظ می‌شود و پس از تعویض، سرعت هم دوباره سنجیده می‌شود؛ در صورت شکست اتصال یا آزمون سرعت، بازگشت تنظیمات امتحان می‌شود.
 - در صورت وجود دامنه/SNI در توکن، تست فعال فقط CDN/ECH تأییدشده را بررسی می‌کند و به IP مستقیم برنمی‌گردد. بدون دامنه/SNI، مخفی‌سازی خودکار IP مبدأ ممکن نیست و جلوگیری قطعی از فیلترینگ قابل تضمین نیست.
 - تاریخچه و محدودیت‌ها در docs/PEAK-TIME-OPTIMIZER.fa.md درج شده‌اند. تغییرهای این قابلیت در لایهٔ مدیرند؛ باینری رسمی موتور همچنان 2.5.1 و پروتکل تونل بدون تغییر است.
 
 
 حالت بازیابی اضطراری / Bond چندحاملی / سوییچ خودکار (SPACE → 8):
-- تونل Auto تازه‌ساخته‌شده به‌صورت پیش‌فرض مجموعهٔ حامل‌های سازگار و تست‌شده را Bond می‌کند؛ اگر فقط یک حامل کار کند، همان مسیر انتخاب می‌شود. هستهٔ موجود می‌تواند پس از خرابی یک حامل روی مسیر زندهٔ دیگر ادامه دهد.
+- تونل Auto تازه‌ساخته‌شده و آزمون مجدد اکنون به‌صورت پیش‌فرض بهترین مسیر تکی را طبق سرعت دانلود/آپلود انتخاب می‌کنند؛ Bond چندحاملی همچنان یک انتخاب دستی است. هستهٔ موجود می‌تواند پس از خرابی یک حامل در Bond، روی مسیر زندهٔ دیگر ادامه دهد.
 - برای آماده‌کردن Auto تک‌حاملیِ موجود: `shah1tun` → `p` → `8` → `r` و سپس نام تونل ایران؛ معادل CLI: `shah1tun auto-resilience NAME`. این تغییر یک‌بار سرویس را restart می‌کند و ممکن است نشست‌های فعال لحظه‌ای reconnect شوند.
-- اگر کل Bond قطع شود، پس از Auto-heal و عدم اتصال مجدد، اسکن اضطراری مسیرها با تست سریع اتصال و RTT اجرا می‌شود؛ هر تونل حداکثر یک اسکن اضطراری در ۶۰ ثانیه دارد.
+- اگر تونل پس از Auto-heal برنگردد، اسکن مسیرهای جایگزین تست کوتاه دانلود/آپلود اجرا می‌کند و بهترین مسیر تکی اندازه‌گیری‌شده را انتخاب می‌کند؛ فقط زنده‌بودن handshake و RTT برای سوییچ کافی نیست.
 - این بسته پروتکل سیمی جدیدی اختراع نمی‌کند و از TLS/WSS/gRPC و Bonding موجود استفاده می‌کند. مسیر محافظت‌شده فقط با دامنه/SNI و CDN/ECH تأییدشده ممکن است؛ بدون آن، IP مستقیم مبدأ پنهان نمی‌شود.
 - قطع کامل اینترنت بین‌المللی که همهٔ مسیرهای قابل دسترسی را از کار بیندازد با سوییچ نرم‌افزاری قابل حل نیست؛ حداقل یک مسیر جایگزین باید از شبکهٔ کاربر قابل دسترسی بماند.
 - جزئیات: docs/EMERGENCY-FAILOVER.fa.md و docs/EMERGENCY-FAILOVER.md.
@@ -125,3 +125,10 @@ systemctl status wattun-heal.timer --no-pager
 - افزوده‌شدن docs/PROTOCOL-FAILOVER-STRATEGY.fa.md و docs/PROTOCOL-FAILOVER-STRATEGY.md.
 - Reality، Hysteria 2 و Trojan به موتور/Carrierها اضافه نشده‌اند؛ مستندات ادعاهای نادرست متن ورودی را تصحیح می‌کنند.
 - بررسی انجام‌شده: Bash syntax، صحت SHA-256 بسته و سلامت آرشیو؛ تست شبکهٔ زنده یا build کامل Go انجام نشده است.
+
+FIX18 — Auto-route compatibility and speed stability (2026-10-21)
+- Kept the Shah SPACE UI, installer, token format, service names, tunnel engine version and explicit Bond/Resilient choices.
+- Matched WatTunnel's default Auto policy: use the best measured single route; bonding is opt-in instead of silently combining every route that passed a basic test.
+- Changed emergency retest to measure short download/upload throughput before switching, rather than ranking all authenticated handshakes as if they had equal throughput.
+- Peak-Time Optimizer is opt-in; a legacy timer without the new explicit opt-in marker is disabled once on the next manager invocation. The existing SPACE toggle remains available.
+- Shell syntax checked. The package was not tested on the user's live VPS pair; actual throughput still depends on carrier, route, packet loss, MTU, CPU and provider filtering.
