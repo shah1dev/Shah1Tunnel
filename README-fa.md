@@ -1,23 +1,6 @@
-![لوگوی شاه تونل](https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/docs/img/shah-tunnel-logo-refresh.svg)
+![لوگوی شاه تونل](docs/img/shah-tunnel-logo.svg)
 
-![ShahTunnel ASCII crown logo](docs/img/shah-tunnel-ascii.svg)
-
-<pre align="center">
-                 /\       /\       /\
-                /  \  /\ /  \  /\ /  \
-               /____\/  \____\/  \____\
-               |____________________________|
-
-##### #           #     #####                         ##
-#     #      ###  #       #   #   # ####  ####   ###   #
-#     ####      # ####    #   #   # #   # #   # #   #  #
-##### #   #  #### #   #   #   #   # #   # #   # #####  #
-    # #   # #   # #   #   #   #   # #   # #   # #      #
-    # #   # #   # #   #   #   #   # #   # #   # #   #  #
-##### #   #  #### #   #   #    ###  #   # #   #  ###  ###
-</pre>
-
-# ShahTunnel | شاه تونل — نسخهٔ 1.3.5
+# شاه تونل (Shah Tunnel) — نسخهٔ 1.3.5
 
 **زبان / Language:** [🇮🇷 فارسی](README-fa.md) · [🇬🇧 English](README.md)
 
