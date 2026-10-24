@@ -1,6 +1,6 @@
-![Shah Tunnel Logo](https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/docs/img/shah-tunnel-logo-refresh.svg)
+![Shah Tunnel logo](docs/img/shah-tunnel-logo.svg)
 
-# Shah Tunnel — Version 1.3.5
+# Shah Tunnel — Version 1.3.6
 
 **Language / زبان:** [🇬🇧 English](README.md) · [🇮🇷 فارسی](README-fa.md)
 

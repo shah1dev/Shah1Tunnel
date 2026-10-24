@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Downloads only the compiled binary and verifies it before installation.
 BASE_URL="https://raw.githubusercontent.com/shah1dev/ShahTunnel/main"
-VERSION="1.3.5"
+VERSION="1.3.6"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "Run as root: bash <(curl -fsSL ${BASE_URL}/S1T-START.sh)" >&2
@@ -60,9 +60,10 @@ Type=simple
 UMask=0077
 ExecStart=/usr/local/bin/ravanreverse run
 Restart=always
-RestartSec=3
-TimeoutStopSec=15
-LimitNOFILE=65535
+RestartSec=2
+TimeoutStopSec=20
+LimitNOFILE=262144
+TasksMax=4096
 NoNewPrivileges=true
 PrivateTmp=true
 PrivateDevices=true
