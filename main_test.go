@@ -237,6 +237,31 @@ func TestGeoDisplayKnown(t *testing.T) {
 	}
 }
 
+func TestGeoDisplayRejectsIPv6(t *testing.T) {
+	g := ServerGeo{IP: "2a01:4f8:c010:33c3::1", Country: "Germany", CountryCode: "DE", UpdatedAt: time.Now(), Valid: true}
+	ip, country := geoDisplay(g)
+	if ip != "Unavailable" || country != "Unknown" {
+		t.Fatalf("IPv6 must not be shown as the primary server IPv4: ip=%q country=%q", ip, country)
+	}
+}
+
+func TestNormalizeServerGeoInvalidatesCachedIPv6(t *testing.T) {
+	oldAttempt := time.Now().Add(-time.Minute)
+	g := ServerGeo{IP: "2a01:4f8:c010:33c3::1", Country: "Germany", CountryCode: "DE", UpdatedAt: oldAttempt, LastAttempt: oldAttempt, Valid: true}
+	got := normalizeServerGeo(g)
+	if got.Valid || got.IP != "" || got.Country != "" || got.CountryCode != "" || !got.LastAttempt.IsZero() {
+		t.Fatalf("IPv6 cache should be invalidated and force a new IPv4 lookup: %#v", got)
+	}
+}
+
+func TestNormalizeServerGeoKeepsIPv4(t *testing.T) {
+	g := ServerGeo{IP: "203.0.113.9", Country: "Exampleland", CountryCode: "EX", UpdatedAt: time.Now(), Valid: true}
+	got := normalizeServerGeo(g)
+	if !got.Valid || got.IP != "203.0.113.9" || got.Country != "Exampleland" {
+		t.Fatalf("valid IPv4 cache changed unexpectedly: %#v", got)
+	}
+}
+
 func TestAgentTunnelChannelDefaultsAndBounds(t *testing.T) {
 	legacy := normalizeConfig(Config{Role: "agent", Target: "127.0.0.1:443"})
 	if legacy.TunnelChannels != defaultTunnelChannels {

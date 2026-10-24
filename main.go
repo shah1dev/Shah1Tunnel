@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -1689,13 +1690,38 @@ type ServerGeo struct {
 
 const serverGeoCachePath = "/etc/ravanreverse/server-info.json"
 
+func normalizeServerGeo(g ServerGeo) ServerGeo {
+	rawIP := strings.TrimSpace(g.IP)
+	if rawIP == "" {
+		if g.Valid {
+			g.Valid = false
+		}
+		return g
+	}
+
+	parsed := net.ParseIP(rawIP)
+	if parsed == nil || parsed.To4() == nil {
+		// The menu is deliberately IPv4-only. Invalidate old IPv6/bad cache
+		// entries and force a fresh lookup instead of showing stale geography.
+		g.IP = ""
+		g.Country = ""
+		g.CountryCode = ""
+		g.UpdatedAt = time.Time{}
+		g.LastAttempt = time.Time{}
+		g.Valid = false
+		return g
+	}
+	g.IP = parsed.To4().String()
+	return g
+}
+
 func readServerGeoCache() ServerGeo {
 	var g ServerGeo
 	b, err := os.ReadFile(serverGeoCachePath)
 	if err == nil {
 		_ = json.Unmarshal(b, &g)
 	}
-	return g
+	return normalizeServerGeo(g)
 }
 
 func writeServerGeoCache(g ServerGeo) {
@@ -1728,7 +1754,18 @@ func serverIdentity() (string, string) {
 	}
 
 	g.LastAttempt = now
-	client := &http.Client{Timeout: 2500 * time.Millisecond}
+	// Force IPv4 at the socket layer. Without tcp4, dual-stack hosts may
+	// report their IPv6 egress address (and its GeoIP result) as the server IP.
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			d := net.Dialer{Timeout: 1500 * time.Millisecond, KeepAlive: 15 * time.Second}
+			return d.DialContext(ctx, "tcp4", addr)
+		},
+		TLSHandshakeTimeout:   1500 * time.Millisecond,
+		ResponseHeaderTimeout: 2 * time.Second,
+	}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Timeout: 3500 * time.Millisecond, Transport: transport}
 	req, err := http.NewRequest(http.MethodGet, "https://ipapi.co/json/", nil)
 	if err == nil {
 		req.Header.Set("User-Agent", "ShahTunnel/"+version)
@@ -1743,17 +1780,21 @@ func serverIdentity() (string, string) {
 					CountryAlt  string `json:"country"`
 					CountryCode string `json:"country_code"`
 				}
-				if json.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&result) == nil && net.ParseIP(strings.TrimSpace(result.IP)) != nil {
-					country := strings.TrimSpace(result.Country)
-					if country == "" {
-						country = strings.TrimSpace(result.CountryAlt)
-					}
-					if country != "" {
-						g.IP = strings.TrimSpace(result.IP)
-						g.Country = country
-						g.CountryCode = strings.ToUpper(strings.TrimSpace(result.CountryCode))
-						g.UpdatedAt = now
-						g.Valid = true
+				if json.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&result) == nil {
+					parsedIP := net.ParseIP(strings.TrimSpace(result.IP))
+					// Never cache or display IPv6 as the primary server identity.
+					if parsedIP != nil && parsedIP.To4() != nil {
+						country := strings.TrimSpace(result.Country)
+						if country == "" {
+							country = strings.TrimSpace(result.CountryAlt)
+						}
+						if country != "" {
+							g.IP = parsedIP.To4().String()
+							g.Country = country
+							g.CountryCode = strings.ToUpper(strings.TrimSpace(result.CountryCode))
+							g.UpdatedAt = now
+							g.Valid = true
+						}
 					}
 				}
 			}
@@ -1764,6 +1805,7 @@ func serverIdentity() (string, string) {
 }
 
 func geoDisplay(g ServerGeo) (string, string) {
+	g = normalizeServerGeo(g)
 	if !g.Valid || strings.TrimSpace(g.IP) == "" || strings.TrimSpace(g.Country) == "" {
 		return "Unavailable", "Unknown"
 	}

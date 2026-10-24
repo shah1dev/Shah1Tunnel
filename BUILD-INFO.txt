@@ -6,5 +6,6 @@ Security: existing TLS 1.2+, SHA-256 certificate pinning and token authenticatio
 Root performance change: four independent authenticated TCP/TLS lanes by default; Hub routes new streams to the least-loaded healthy lane
 Legacy compatibility: missing tunnel_channels in an Agent config defaults to 4; wire protocol remains RREV2, but an old Hub replaces concurrent Agent lanes, so upgrade Hub first, then Agent
 Source: main.go and main_test.go included
+Server identity fix: force TCP over IPv4 for GeoIP lookup; reject IPv6 results and invalidate stale cached IPv6 identities. Added regression tests.
 Validation: go test -race ./..., go vet ./..., bash -n install scripts, Linux amd64 build, version/checksum validation, ZIP integrity
 Note: this addresses shared outer-TCP head-of-line blocking by splitting streams over independent TCP congestion windows. Real-world throughput still depends on the two VPS plans and interconnect quality.
