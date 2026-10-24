@@ -1,16 +1,16 @@
 Product: Shah Tunnel
-Version: 1.3.11
+Version: 1.4.0
 Target: Linux amd64 / x86_64
-Build: Go compiler; -trimpath; stripped debug/symbol tables (-s -w); CGO disabled
-Security: TLS 1.2+, SHA-256 certificate pinning, token authentication
-Stream selection: skips closed tunnel lanes during public stream allocation
-Close-race handling: expected net.ErrClosed / context-canceled stream opens are not journal-spammed; actual failures are rate-limited
-Target recovery: four bounded local-target dial attempts, 2-second per-attempt timeout, jittered increasing delays; pending dials cancelled on stream close/lane shutdown
-Admission control: 512 active + pending opens per lane
-Backpressure: bounded per-stream data flow and process-wide queued payload budget
-Lanes: four independently authenticated TCP/TLS lanes by default; each lane reconnects independently
-Command deck: multi-color ASCII crown above slash-stroke SHAH TUNNEL lettering; existing COMMAND DECK frame preserved
-Protocol: RREV3; both Hub and Agent must be upgraded together because older RREV2 does not understand data acknowledgements or half-close
-Validation: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh
+Build: Go; CGO_ENABLED=0; -trimpath; linker flags -s -w -buildid= (debug/symbol tables stripped)
+Security: TLS 1.2+, SHA-256 certificate fingerprint pinning, token authentication
+Protocol: RREV3; Hub and Agent must use compatible versions
+Lanes: four independently authenticated TCP/TLS lanes by default; each reconnects independently with jittered exponential backoff
+Flow control: bounded per-stream acknowledgement windows and process-wide queued payload budget
+Admission control: 512 active plus pending streams per lane; capacity reserved before local target dial
+Target recovery: up to four TCP dial attempts, 2-second timeout per attempt, bounded jittered delays; pending dials cancelled on CLOSE or lane shutdown
+Close-race handling: expected EOF/net.ErrClosed/context cancellation is not logged as an open-stream error; actual open failures are rate-limited
+Lane selection: closed lanes excluded from stream selection
+Command deck: multi-colour ASCII crown and bright cyan slash-letter SHAH TUNNEL wordmark above a frame titled COMMAND DECK (no duplicate name inside the frame)
 Public package: precompiled binary only; Go source and tests are not included
-Note: local tests do not measure real-world loss or throughput on production VPS links.
+Validation: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh; binary version and SHA-256 checked
+Limit: local tests do not measure real-world loss, service restarts or throughput on production VPS links.
