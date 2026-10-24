@@ -1,4 +1,4 @@
-![لوگوی شاه تونل](https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/docs/img/shah-tunnel-logo.svg?v=2)
+![لوگوی شاه تونل](https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/docs/img/shah-tunnel-logo-refresh.svg)
 
 # شاه تونل (Shah Tunnel) — نسخهٔ 1.3.5
 
