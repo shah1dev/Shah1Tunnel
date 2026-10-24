@@ -1,0 +1,10 @@
+Product: Shah Tunnel
+Version: 1.3.4
+Target: Linux amd64 (x86_64)
+Binary: S1T-CAPSULE/S1T-CORE
+Build: Go, static Linux binary; stripped symbols/debug info
+Geo lookup: ipapi.co -> ipwho.is -> api.ipapi.is; public-IP fallback: api.ipify.org -> checkip.amazonaws.com
+Display: country and public egress IP combined on one terminal line
+Installer: one-command bootstrapper, SHA-256 verification, systemd setup, preserve existing config, open menu
+Tests: go test ./... (passed); go vet ./... (passed); linux/amd64 build (passed); binary version invocation (passed)
+Note: live API reachability depends on each server's outbound network and is not guaranteed by compile-time tests.

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Public one-command bootstrapper. Only the stripped, compiled executable is
-# downloaded from S1T-CAPSULE; source archives are not used by this installer.
+# Public one-command bootstrapper. Downloads only the compiled binary from
+# S1T-CAPSULE and verifies the SHA-256 checksum before executing it.
 BASE_URL="https://raw.githubusercontent.com/shah1dev/ShahTunnel/main"
+VERSION="1.3.4"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "Run as root: bash <(curl -fsSL ${BASE_URL}/S1T-START.sh)" >&2
@@ -11,7 +12,7 @@ if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
 fi
 case "$(uname -s):$(uname -m)" in
   Linux:x86_64|Linux:amd64) ;;
-  *) echo "Shah Tunnel 1.3.3 targets Linux x86_64/amd64." >&2; exit 1 ;;
+  *) echo "Shah Tunnel ${VERSION} targets Linux x86_64/amd64." >&2; exit 1 ;;
 esac
 command -v systemctl >/dev/null 2>&1 || { echo "systemd/systemctl is required." >&2; exit 1; }
 for cmd in curl sha256sum awk install; do
@@ -23,7 +24,7 @@ chmod 0700 "$TMP"
 cleanup() { rm -rf -- "$TMP"; }
 trap cleanup EXIT
 
-printf '\n=== Shah Tunnel 1.3.3 | Binary Installer ===\n'
+printf '\n=== Shah Tunnel %s | Binary Installer ===\n' "$VERSION"
 printf '[1/5] Downloading the compiled tunnel...\n'
 curl -fLsS --retry 3 --connect-timeout 10 "$BASE_URL/S1T-CAPSULE/S1T-CORE" -o "$TMP/S1T-CORE"
 curl -fLsS --retry 3 --connect-timeout 10 "$BASE_URL/S1T-CHECKSUM.sha256" -o "$TMP/S1T-CHECKSUM.sha256"
