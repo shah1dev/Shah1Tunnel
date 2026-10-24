@@ -1,4 +1,4 @@
-![Shah Tunnel logo](docs/img/shah-tunnel-logo.svg)
+![Shah Tunnel Logo](https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/docs/img/shah-tunnel-logo.svg?v=2)
 
 # Shah Tunnel — Version 1.3.5
 
