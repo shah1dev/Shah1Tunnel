@@ -1,14 +1,16 @@
 Product: Shah Tunnel
-Version: 1.3.10
+Version: 1.3.11
 Target: Linux amd64 / x86_64
-Build: Go compiler with -trimpath and stripped debug/symbol tables (-s -w)
+Build: Go compiler; -trimpath; stripped debug/symbol tables (-s -w); CGO disabled
 Security: TLS 1.2+, SHA-256 certificate pinning, token authentication
-Target recovery: four bounded local-target dial attempts, 2-second per-attempt timeout, jittered increasing delays
-Admission control: 512 active + pending opens per lane; pending target dials are cancellable
-Diagnostics: safe target failure classes without printing the configured target address
-Backpressure: up to eight 32-KiB outstanding data frames per stream; 32-MiB process-wide queued payload budget
+Stream selection: skips closed tunnel lanes during public stream allocation
+Close-race handling: expected net.ErrClosed / context-canceled stream opens are not journal-spammed; actual failures are rate-limited
+Target recovery: four bounded local-target dial attempts, 2-second per-attempt timeout, jittered increasing delays; pending dials cancelled on stream close/lane shutdown
+Admission control: 512 active + pending opens per lane
+Backpressure: bounded per-stream data flow and process-wide queued payload budget
 Lanes: four independently authenticated TCP/TLS lanes by default; each lane reconnects independently
+Command deck: multi-color ASCII crown above slash-stroke SHAH TUNNEL lettering; existing COMMAND DECK frame preserved
 Protocol: RREV3; both Hub and Agent must be upgraded together because older RREV2 does not understand data acknowledgements or half-close
 Validation: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh
-Public package: precompiled binary only; source files are not included
+Public package: precompiled binary only; Go source and tests are not included
 Note: local tests do not measure real-world loss or throughput on production VPS links.
