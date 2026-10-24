@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Public one-command bootstrapper. Downloads only the compiled binary from
-# S1T-CAPSULE and verifies the SHA-256 checksum before executing it.
+# Downloads only the compiled binary and verifies it before installation.
 BASE_URL="https://raw.githubusercontent.com/shah1dev/ShahTunnel/main"
-VERSION="1.3.4"
+VERSION="1.3.5"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "Run as root: bash <(curl -fsSL ${BASE_URL}/S1T-START.sh)" >&2
@@ -24,8 +23,8 @@ chmod 0700 "$TMP"
 cleanup() { rm -rf -- "$TMP"; }
 trap cleanup EXIT
 
-printf '\n=== Shah Tunnel %s | Binary Installer ===\n' "$VERSION"
-printf '[1/5] Downloading the compiled tunnel...\n'
+printf '\n=== Shah Tunnel %s | Installer ===\n' "$VERSION"
+printf '[1/5] Downloading tunnel binary...\n'
 curl -fLsS --retry 3 --connect-timeout 10 "$BASE_URL/S1T-CAPSULE/S1T-CORE" -o "$TMP/S1T-CORE"
 curl -fLsS --retry 3 --connect-timeout 10 "$BASE_URL/S1T-CHECKSUM.sha256" -o "$TMP/S1T-CHECKSUM.sha256"
 EXPECTED="$(tr -d '[:space:]' < "$TMP/S1T-CHECKSUM.sha256")"
@@ -35,17 +34,19 @@ ACTUAL="$(sha256sum "$TMP/S1T-CORE" | awk '{print $1}')"
   exit 2
 }
 chmod 0750 "$TMP/S1T-CORE"
-"$TMP/S1T-CORE" version >/dev/null || { echo 'Downloaded file is not a valid Shah Tunnel binary.' >&2; exit 2; }
-echo '[2/5] Checksum verified.'
+"$TMP/S1T-CORE" version | grep -Fq "Shah Tunnel ${VERSION} (linux/amd64)" || {
+  echo 'Downloaded binary version did not match the installer.' >&2; exit 2;
+}
+echo '[2/5] Checksum and version verified.'
 
-printf '[3/5] Installing the binary; keeping existing configuration...\n'
+printf '[3/5] Installing binary...\n'
 install -d -o root -g root -m 0700 /etc/ravanreverse
 install -d -o root -g root -m 0755 /usr/local/bin
 install -o root -g root -m 0750 "$TMP/S1T-CORE" /usr/local/bin/ravanreverse.new
 mv -f /usr/local/bin/ravanreverse.new /usr/local/bin/ravanreverse
 ln -sfn /usr/local/bin/ravanreverse /usr/local/bin/shah-tunnel
 
-printf '[4/5] Installing systemd service...\n'
+printf '[4/5] Installing service...\n'
 cat > "$TMP/ravanreverse.service" <<'UNIT'
 [Unit]
 Description=Shah Tunnel authenticated reverse TCP tunnel
@@ -102,12 +103,12 @@ if [[ -f /etc/ravanreverse/config.json ]]; then
     journalctl -u ravanreverse -n 40 --no-pager >&2 || true
     exit 1
   fi
-  echo 'Existing configuration preserved; service restarted.'
+  echo 'Tunnel service updated; existing config remains intact.'
 else
-  echo 'No existing configuration found. Configure the tunnel from the menu next.'
+  echo 'No saved tunnel configuration found. Complete setup from the menu next.'
 fi
 
-printf '[5/5] Cleaning temporary files and opening the menu...\n'
+printf '[5/5] Cleaning temporary files and opening menu...\n'
 cleanup
 trap - EXIT
 exec /usr/local/bin/shah-tunnel

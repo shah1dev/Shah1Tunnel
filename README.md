@@ -1,70 +1,42 @@
-![Shah Tunnel](docs/img/shah-tunnel-logo.svg)
+![Shah Tunnel logo](docs/img/shah-tunnel-logo.svg)
 
-# Shah Tunnel — v1.3.4
+# Shah Tunnel — Version 1.3.5
 
 **Language / زبان:** [🇬🇧 English](README.md) · [🇮🇷 فارسی](README-fa.md)
 
-**Authenticated reverse TCP tunnel for Linux `amd64`** · Binary-only one-command installer · systemd managed
+Shah Tunnel is an **authenticated reverse TCP tunnel** that forwards incoming connections from a public entry server to a TCP service on a destination server. It is useful when the destination service should not be exposed directly to the Internet or when the entry server has no suitable direct path to that destination.
 
-> Release: **1.3.4** — IP/country lookup now tries multiple providers, falls back to an IP-only lookup, and presents the country and public IP together in the terminal menu.
+## How it works
 
-## Quick install
+```text
+Client ── TCP ──▶ Hub (public entry)
+                    ║
+                    ║ authenticated TLS channel
+                    ║
+                 Agent (exit) ── TCP ──▶ Destination service
+```
 
-Run on an Ubuntu/Debian `x86_64` server as `root`:
+- **Hub:** Listens on configured public ports and accepts incoming connections.
+- **Agent:** Initiates an outbound authenticated connection to the Hub and forwards TCP streams to configured destinations.
+- **Port mappings:** Each public listener can map to a separate TCP destination; the mapping identifier must match on both ends.
+- **Channel security:** The Hub↔Agent channel uses TLS 1.2 or newer, SHA-256 certificate-fingerprint pinning for the Hub, and a shared random authentication token.
+- **Resilience:** The Agent retries the connection after a drop; systemd can supervise and restart the service after failures.
+- **Optional Relay:** In supported layouts, a Relay forwards TCP streams to its configured destination.
+
+## Typical uses
+
+Forward TCP connections for panels, web applications, or other services listening on a TCP port. For example, the Hub accepts a public port and the Agent forwards it to a destination such as `127.0.0.1:PORT`. The actual address and port depend on the application.
+
+## What it is not
+
+Shah Tunnel is not a general-purpose VPN such as WireGuard: it does not create a virtual network interface or route all IP traffic for a device or server. It forwards only the configured TCP connections. TLS protects the Hub-to-Agent channel; application-level encryption, when required, must be provided by the destination service itself.
+
+## Easy installation
+
+On an Ubuntu/Debian `x86_64` server, run as `root`:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/shah1dev/ShahTunnel/main/S1T-START.sh)
 ```
 
-The installer downloads `S1T-CAPSULE/S1T-CORE`, verifies its SHA-256 using `S1T-CHECKSUM.sha256`, installs the executable and systemd unit, preserves an existing `/etc/ravanreverse/config.json`, and opens the interactive menu. No ZIP or source archive is needed on the server. Requirements: root access, `curl`, `sha256sum`, and systemd.
-
-Open the menu later with:
-
-```bash
-shah-tunnel
-```
-
-## Technical overview
-
-Shah Tunnel forwards raw TCP connections between a public entry point and a destination reachable from the exit server. It is an application-level TCP tunnel, not a virtual-network interface or a general-purpose IP VPN.
-
-```text
-TCP client → Hub public listener → authenticated TLS connection → Agent → configured TCP target
-```
-
-- **Hub (entry):** listens on configured public TCP ports and receives the Agent's outbound connection.
-- **Agent (exit):** initiates an authenticated connection to the Hub and opens the configured local target for each forwarded stream.
-- **Port mappings:** multiple mappings can be configured; IDs must match on both ends.
-- **Transport security:** Hub–Agent tunnel traffic uses TLS 1.2 or newer, certificate SHA-256 fingerprint pinning, and a shared random 256-bit authentication token.
-- **Resilience:** connection health checks, automatic reconnect/backoff, and systemd restart-on-failure support.
-- **Operations:** interactive setup/menu, start/stop/restart, status and logs, and complete uninstall of Shah Tunnel's own service/files.
-- **Server identity:** the menu checks the server's public egress IP and country using multiple HTTPS metadata providers. Results are cached for up to six hours; an IP-only fallback keeps the IP visible when country lookup fails. If the server cannot reach any provider, information may still show as unavailable.
-
-## Compatibility and file layout
-
-- Release version: **1.3.4**
-- Target: Linux `amd64` / `x86_64` with systemd
-- Installed binary: `/usr/local/bin/ravanreverse`
-- User command: `/usr/local/bin/shah-tunnel`
-- Service/config compatibility names: `ravanreverse` and `/etc/ravanreverse/config.json`
-- Public repository layout: only the compiled executable is placed inside `S1T-CAPSULE/`; installer, checksum and documentation remain outside that folder.
-
-The existing logo is stored at [`docs/img/shah-tunnel-logo.svg`](docs/img/shah-tunnel-logo.svg) and displayed above this introduction.
-
-## Security notes
-
-- Keep the Hub token and `/etc/ravanreverse/config.json` private. Never commit live tokens, private keys or server configuration.
-- TLS protects the Hub–Agent tunnel connection; it does not make the server's public IP invisible to upstream networks or network observers.
-- IP geolocation is approximate network metadata, not proof of a server's physical location or ownership. A provider receives the IP lookup request.
-- A stripped, compiled binary does not contain readable Go source files, but no executable can be guaranteed impossible to reverse engineer. Avoid publishing the source or old source archives in a public repository if source confidentiality is required.
-- Removing a file from the latest Git commit does not erase its older copies from Git history. Previously published source may remain available in old commits/forks/caches unless history and copies are handled separately.
-
-## Diagnostics
-
-```bash
-systemctl status ravanreverse --no-pager -l
-journalctl -u ravanreverse -n 50 --no-pager
-/usr/local/bin/shah-tunnel version
-```
-
-No open-source license is declared by this release. Add an appropriate license before granting redistribution rights.
+For Persian, open the [Persian README](README-fa.md).
