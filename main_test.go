@@ -34,6 +34,92 @@ func TestFrameRoundTrip(t *testing.T) {
 	}
 }
 
+type firstWriteGateConn struct {
+	net.Conn
+	started chan struct{}
+	release chan struct{}
+	once    sync.Once
+}
+
+func (c *firstWriteGateConn) Write(p []byte) (int, error) {
+	first := false
+	c.once.Do(func() {
+		first = true
+		close(c.started)
+	})
+	if first {
+		<-c.release
+	}
+	return c.Conn.Write(p)
+}
+
+func TestWirePrioritizesControlFramesOverQueuedData(t *testing.T) {
+	a, b := net.Pipe()
+	gated := &firstWriteGateConn{Conn: a, started: make(chan struct{}), release: make(chan struct{})}
+	wa := newWire(gated)
+	wb := newWire(b)
+	defer wa.close()
+	defer wb.close()
+
+	firstDone := make(chan error, 1)
+	go func() { firstDone <- wa.send(msgData, 1, []byte("first-data")) }()
+	select {
+	case <-gated.started:
+	case <-time.After(time.Second):
+		t.Fatal("writer did not start first data frame")
+	}
+
+	secondDone := make(chan error, 1)
+	go func() { secondDone <- wa.send(msgData, 2, []byte("second-data")) }()
+	deadline := time.Now().Add(time.Second)
+	for len(wa.dataQ) == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if len(wa.dataQ) == 0 {
+		t.Fatal("second data frame was not queued")
+	}
+
+	controlDone := make(chan error, 1)
+	go func() { controlDone <- wa.send(msgOpenOK, 3, nil) }()
+	deadline = time.Now().Add(time.Second)
+	for len(wa.controlQ) == 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if len(wa.controlQ) == 0 {
+		t.Fatal("control frame was not queued")
+	}
+	close(gated.release)
+
+	want := []struct {
+		typ  byte
+		id   uint32
+		data string
+	}{
+		{msgData, 1, "first-data"},
+		{msgOpenOK, 3, ""},
+		{msgData, 2, "second-data"},
+	}
+	for i, w := range want {
+		got, err := wb.receive()
+		if err != nil {
+			t.Fatalf("read frame %d: %v", i, err)
+		}
+		if got.typ != w.typ || got.id != w.id || string(got.data) != w.data {
+			t.Fatalf("frame %d = type %d id %d data %q; want type %d id %d data %q", i, got.typ, got.id, got.data, w.typ, w.id, w.data)
+		}
+	}
+	for name, ch := range map[string]<-chan error{"first data": firstDone, "control": controlDone, "second data": secondDone} {
+		select {
+		case err := <-ch:
+			if err != nil {
+				t.Fatalf("%s send: %v", name, err)
+			}
+		case <-time.After(time.Second):
+			t.Fatalf("%s send did not complete", name)
+		}
+	}
+}
+
 func TestWireWriteFailureClosesLane(t *testing.T) {
 	a, b := net.Pipe()
 	w := newWire(a)

@@ -35,23 +35,25 @@ import (
 )
 
 const (
-	version                    = "1.3.8"
-	configPath                 = "/etc/ravanreverse/config.json"
-	maxFrame                   = 64 * 1024
-	defaultTunnelChannels      = 4
-	maxTunnelChannels          = 8
-	msgOpen               byte = 1
-	msgOpenOK             byte = 2
-	msgOpenErr            byte = 3
-	msgData               byte = 4
-	msgClose              byte = 5
-	msgPing               byte = 6
-	msgPong               byte = 7
-	maxStreams                 = 512
-	streamWindowFrames         = 8
-	maxQueuedPayloadBytes      = int64(32 << 20)
-	msgHalfClose          byte = 8
-	msgDataAck            byte = 9
+	version                       = "1.3.9"
+	configPath                    = "/etc/ravanreverse/config.json"
+	maxFrame                      = 64 * 1024
+	defaultTunnelChannels         = 4
+	maxTunnelChannels             = 8
+	msgOpen                  byte = 1
+	msgOpenOK                byte = 2
+	msgOpenErr               byte = 3
+	msgData                  byte = 4
+	msgClose                 byte = 5
+	msgPing                  byte = 6
+	msgPong                  byte = 7
+	maxStreams                    = 512
+	streamWindowFrames            = 8
+	maxQueuedPayloadBytes         = int64(32 << 20)
+	wireWriteTimeout              = 12 * time.Second
+	reverseStreamOpenTimeout      = 18 * time.Second
+	msgHalfClose             byte = 8
+	msgDataAck               byte = 9
 )
 
 var (
@@ -164,16 +166,33 @@ type frame struct {
 	data []byte
 }
 
+type wireRequest struct {
+	typ  byte
+	id   uint32
+	data []byte
+	done chan error
+}
+
 type wire struct {
-	conn    net.Conn
-	writeMu sync.Mutex
-	done    chan struct{}
-	once    sync.Once
+	conn     net.Conn
+	controlQ chan *wireRequest
+	dataQ    chan *wireRequest
+	done     chan struct{}
+	once     sync.Once
 }
 
 func newWire(c net.Conn) *wire {
 	tuneTCPConn(c)
-	return &wire{conn: c, done: make(chan struct{})}
+	w := &wire{
+		conn: c,
+		// Control traffic (OPEN/ACK/CLOSE/PING) must not queue behind
+		// bulk payloads. Data remains bounded so a slow path applies backpressure.
+		controlQ: make(chan *wireRequest, 256),
+		dataQ:    make(chan *wireRequest, 64),
+		done:     make(chan struct{}),
+	}
+	go w.writeLoop()
+	return w
 }
 
 // tuneTCPConn applies latency-safe options without disabling Linux TCP
@@ -215,31 +234,71 @@ func (w *wire) send(typ byte, id uint32, data []byte) error {
 		return net.ErrClosed
 	default:
 	}
-	var h [9]byte
-	h[0] = typ
-	binary.BigEndian.PutUint32(h[1:5], id)
-	binary.BigEndian.PutUint32(h[5:9], uint32(len(data)))
-	w.writeMu.Lock()
-	defer w.writeMu.Unlock()
+	req := &wireRequest{typ: typ, id: id, data: data, done: make(chan error, 1)}
+	queue := w.controlQ
+	if typ == msgData {
+		queue = w.dataQ
+	}
+	// send stays synchronous: callers may safely reuse their frame buffer only
+	// after this returns. Queueing is bounded and cancellation follows lane close.
 	select {
+	case queue <- req:
 	case <-w.done:
 		return net.ErrClosed
-	default:
 	}
-	// A partial frame corrupts the byte stream, so any write failure must
-	// terminate this lane. The deadline also prevents a stalled socket from
-	// holding the write mutex forever and blocking every stream on that lane.
-	_ = w.conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+	select {
+	case err := <-req.done:
+		return err
+	case <-w.done:
+		return net.ErrClosed
+	}
+}
+
+func (w *wire) writeRequest(req *wireRequest) error {
+	_ = w.conn.SetWriteDeadline(time.Now().Add(wireWriteTimeout))
+	var h [9]byte
+	h[0] = req.typ
+	binary.BigEndian.PutUint32(h[1:5], req.id)
+	binary.BigEndian.PutUint32(h[5:9], uint32(len(req.data)))
 	err := writeFull(w.conn, h[:])
-	if err == nil && len(data) > 0 {
-		err = writeFull(w.conn, data)
+	if err == nil && len(req.data) > 0 {
+		err = writeFull(w.conn, req.data)
 	}
 	_ = w.conn.SetWriteDeadline(time.Time{})
-	if err != nil {
-		w.close()
-		return err
+	return err
+}
+
+func (w *wire) writeLoop() {
+	for {
+		var req *wireRequest
+		// Prefer control traffic whenever a frame boundary is reached. A single
+		// frame cannot be preempted, but queued data no longer delays OPEN/ACK.
+		select {
+		case <-w.done:
+			return
+		case req = <-w.controlQ:
+		default:
+		}
+		if req == nil {
+			select {
+			case <-w.done:
+				return
+			case req = <-w.controlQ:
+			case req = <-w.dataQ:
+			}
+		}
+		if req == nil {
+			continue
+		}
+		if err := w.writeRequest(req); err != nil {
+			// Deliver the concrete error to the current sender before closing the
+			// lane; all other queued senders unblock through w.done.
+			req.done <- err
+			w.close()
+			return
+		}
+		req.done <- nil
 	}
-	return nil
 }
 func (w *wire) receive() (frame, error) {
 	var h [9]byte
@@ -572,10 +631,10 @@ func (s *hubSession) addStream(c net.Conn, portID ...string) (uint32, *hubStream
 			s.remove(id, true)
 			return 0, nil, err
 		}
-	case <-time.After(10 * time.Second):
+	case <-time.After(reverseStreamOpenTimeout):
 		s.remove(id, true)
 		_ = s.wire.send(msgClose, id, nil)
-		return 0, nil, errors.New("remote target did not open within 10 seconds")
+		return 0, nil, fmt.Errorf("agent did not acknowledge mapping %q within %s", key, reverseStreamOpenTimeout)
 	case <-s.wire.done:
 		s.remove(id, true)
 		return 0, nil, net.ErrClosed

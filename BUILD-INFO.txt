@@ -1,16 +1,15 @@
 Product: Shah Tunnel
-Version: 1.3.8
+Version: 1.3.9
 Target: Linux amd64 / x86_64
 Language: Go (standard library only)
-Security: TLS 1.2+, SHA-256 certificate pinning and token authentication retained
-Root reliability fix: the shared frame reader no longer performs blocking destination writes; each stream has an isolated bounded writer
-Flow control: eight outstanding 32-KiB data frames per stream, acknowledged only after destination writes complete
-Memory safety: 32-MiB global cap for queued tunnel payload plus bounded per-stream queues
-Stream semantics: directional TCP half-close is preserved; hard failures still reset only the affected stream when possible
-Transport safety: 30-second write deadline; a partial frame/write failure closes the lane to avoid reusing a corrupted frame stream
-Lane strategy: four independently authenticated TCP/TLS lanes by default; each lane reconnects independently and the Hub routes new streams to the least-loaded healthy lane
-Protocol: RREV3; both Hub and Agent must be upgraded together because RREV2 does not understand data acknowledgements or half-close messages
-Source: main.go and main_test.go included
-Validation completed: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh, Linux amd64 build, binary version/checksum validation, ZIP integrity
-Regression tests include: 30 concurrent clients, slow-target isolation, transfers above the flow-control window, TCP half-close, invalid frame-writer failure closure, TLS lane balancing, and GeoIP fallback behavior
-Note: local tests validate software correctness, not real-world packet loss/throughput on the two production VPS paths. If disconnections remain after both ends run v1.3.8, collect journalctl and TCP retransmission counters from both servers.
+Security: TLS 1.2+, SHA-256 certificate pinning, token authentication
+Stream reliability: isolated bounded destination writers with per-stream data acknowledgements
+Backpressure: up to eight 32-KiB outstanding data frames per stream; 32-MiB process-wide queued payload budget
+Wire writer: bounded control/data queues; OPEN/ACK/CLOSE/PING frames are prioritized at frame boundaries over queued payloads
+Transport safety: 12-second per-frame write deadline; a partial frame/write failure closes the lane
+Open behavior: 18-second acknowledgement timeout; local target dial timeout remains bounded
+Lanes: four independently authenticated TCP/TLS lanes by default; each lane reconnects independently
+Protocol: RREV3; both Hub and Agent must be upgraded together because older RREV2 does not understand data acknowledgements or half-close
+Tests: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh
+Regression coverage: priority control frames, 30 concurrent clients, slow-target isolation, transfers beyond flow-control window, TCP half-close, TLS lane balancing, malformed/failed writes, GeoIP fallbacks
+Note: local tests do not measure real-world loss or throughput on production VPS links. Compare both-end logs and TCP retransmission counters under load.
