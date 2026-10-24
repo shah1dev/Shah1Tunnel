@@ -1,0 +1,24 @@
+// Replace the existing banner-printing block with printShahTunnelBanner().
+// Requires: import "fmt" (if not already imported).
+func printShahTunnelBanner() {
+    reset := "\x1b[0m"
+    colors := []string{"\x1b[38;5;220m", "\x1b[38;5;213m", "\x1b[38;5;177m", "\x1b[38;5;51m"}
+    art := []string{
+        "                 /\\       /\\       /\\",
+        "                /  \\  /\\ /  \\  /\\ /  \\",
+        "               /____\\/  \\____\\/  \\____\\",
+        "               |____________________________|",
+        "",
+        "##### #           #     #####                         ##",
+        "#     #      ###  #       #   #   # ####  ####   ###   #",
+        "#     ####      # ####    #   #   # #   # #   # #   #  #",
+        "##### #   #  #### #   #   #   #   # #   # #   # #####  #",
+        "    # #   # #   # #   #   #   #   # #   # #   # #      #",
+        "    # #   # #   # #   #   #   #   # #   # #   # #   #  #",
+        "##### #   #  #### #   #   #    ###  #   # #   #  ###  ###",
+        "//  AUTHENTICATED REVERSE TCP TUNNEL  //",
+    }
+    for i, line := range art {
+        fmt.Println(colors[i%len(colors)] + line + reset)
+    }
+}
