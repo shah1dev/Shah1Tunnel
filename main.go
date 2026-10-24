@@ -35,7 +35,7 @@ import (
 )
 
 const (
-	version                    = "1.3.6"
+	version                    = "1.3.8"
 	configPath                 = "/etc/ravanreverse/config.json"
 	maxFrame                   = 64 * 1024
 	defaultTunnelChannels      = 4
@@ -48,6 +48,10 @@ const (
 	msgPing               byte = 6
 	msgPong               byte = 7
 	maxStreams                 = 512
+	streamWindowFrames         = 8
+	maxQueuedPayloadBytes      = int64(32 << 20)
+	msgHalfClose          byte = 8
+	msgDataAck            byte = 9
 )
 
 var (
@@ -94,6 +98,7 @@ var metricSent atomic.Uint64
 var metricReceived atomic.Uint64
 var metricConnected atomic.Bool
 var lastAuthFailureLog atomic.Int64
+var queuedPayloadBytes atomic.Int64
 
 // The Agent reports connected while at least one parallel tunnel lane is alive.
 // A mutex keeps the metric accurate when lanes reconnect concurrently.
@@ -216,11 +221,23 @@ func (w *wire) send(typ byte, id uint32, data []byte) error {
 	binary.BigEndian.PutUint32(h[5:9], uint32(len(data)))
 	w.writeMu.Lock()
 	defer w.writeMu.Unlock()
-	if err := writeFull(w.conn, h[:]); err != nil {
-		return err
+	select {
+	case <-w.done:
+		return net.ErrClosed
+	default:
 	}
-	if len(data) > 0 {
-		return writeFull(w.conn, data)
+	// A partial frame corrupts the byte stream, so any write failure must
+	// terminate this lane. The deadline also prevents a stalled socket from
+	// holding the write mutex forever and blocking every stream on that lane.
+	_ = w.conn.SetWriteDeadline(time.Now().Add(30 * time.Second))
+	err := writeFull(w.conn, h[:])
+	if err == nil && len(data) > 0 {
+		err = writeFull(w.conn, data)
+	}
+	_ = w.conn.SetWriteDeadline(time.Time{})
+	if err != nil {
+		w.close()
+		return err
 	}
 	return nil
 }
@@ -256,6 +273,170 @@ func writeFull(w io.Writer, b []byte) error {
 	return nil
 }
 
+type streamWriteRequest struct {
+	data      []byte
+	halfClose bool
+}
+
+// streamWriter isolates a slow local destination from the shared frame reader.
+// Data is acknowledged only after it has been written to the destination, which
+// provides per-stream back-pressure. The bounded queue and global byte budget
+// keep a slow target from consuming unbounded RAM.
+type streamWriter struct {
+	conn        net.Conn
+	queue       chan streamWriteRequest
+	done        chan struct{}
+	mu          sync.Mutex
+	closed      bool
+	onWritten   func() error
+	onHalfClose func()
+	onError     func(error)
+}
+
+func reserveQueuedPayload(n int) bool {
+	if n < 0 || int64(n) > maxQueuedPayloadBytes {
+		return false
+	}
+	for {
+		old := queuedPayloadBytes.Load()
+		if old+int64(n) > maxQueuedPayloadBytes {
+			return false
+		}
+		if queuedPayloadBytes.CompareAndSwap(old, old+int64(n)) {
+			return true
+		}
+	}
+}
+
+func newStreamWriter(conn net.Conn, onWritten func() error, onHalfClose func(), onError func(error)) *streamWriter {
+	w := &streamWriter{
+		conn: conn, queue: make(chan streamWriteRequest, streamWindowFrames+1),
+		done: make(chan struct{}), onWritten: onWritten, onHalfClose: onHalfClose, onError: onError,
+	}
+	go w.run()
+	return w
+}
+
+func (w *streamWriter) enqueue(data []byte) bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed || !reserveQueuedPayload(len(data)) {
+		return false
+	}
+	select {
+	case w.queue <- streamWriteRequest{data: data}:
+		return true
+	default:
+		queuedPayloadBytes.Add(-int64(len(data)))
+		return false
+	}
+}
+
+func (w *streamWriter) enqueueHalfClose() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.closed {
+		return false
+	}
+	select {
+	case w.queue <- streamWriteRequest{halfClose: true}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (w *streamWriter) close() {
+	w.mu.Lock()
+	if !w.closed {
+		w.closed = true
+		close(w.done)
+		_ = w.conn.Close()
+	}
+	w.mu.Unlock()
+}
+
+func (w *streamWriter) drain() {
+	for {
+		select {
+		case req := <-w.queue:
+			if len(req.data) > 0 {
+				queuedPayloadBytes.Add(-int64(len(req.data)))
+			}
+		default:
+			return
+		}
+	}
+}
+
+func (w *streamWriter) fail(err error) {
+	if w.onError != nil {
+		w.onError(err)
+	}
+	w.close()
+	w.drain()
+}
+
+func (w *streamWriter) run() {
+	for {
+		select {
+		case <-w.done:
+			w.drain()
+			return
+		case req := <-w.queue:
+			if req.halfClose {
+				cw, ok := w.conn.(interface{ CloseWrite() error })
+				if !ok {
+					w.fail(errors.New("stream does not support TCP half-close"))
+					return
+				}
+				if err := cw.CloseWrite(); err != nil {
+					w.fail(err)
+					return
+				}
+				if w.onHalfClose != nil {
+					w.onHalfClose()
+				}
+				continue
+			}
+			_ = w.conn.SetWriteDeadline(time.Now().Add(45 * time.Second))
+			err := writeFull(w.conn, req.data)
+			_ = w.conn.SetWriteDeadline(time.Time{})
+			queuedPayloadBytes.Add(-int64(len(req.data)))
+			if err == nil && w.onWritten != nil {
+				err = w.onWritten()
+			}
+			if err != nil {
+				w.fail(err)
+				return
+			}
+		}
+	}
+}
+
+type streamEOF struct{ flags atomic.Uint32 }
+
+func (e *streamEOF) mark(local bool) bool {
+	var bit uint32 = 2
+	if local {
+		bit = 1
+	}
+	for {
+		old := e.flags.Load()
+		next := old | bit
+		if e.flags.CompareAndSwap(old, next) {
+			return next == 3
+		}
+	}
+}
+
+func acknowledge(ch chan struct{}) {
+	select {
+	case <-ch:
+	default:
+	}
+}
+
 func heartbeat(w *wire, stop <-chan struct{}) {
 	t := time.NewTicker(20 * time.Second)
 	defer t.Stop()
@@ -278,9 +459,19 @@ type hubStream struct {
 	conn       net.Conn
 	opened     chan error
 	openedOnce sync.Once
+	writer     *streamWriter
+	inflight   chan struct{}
+	eof        streamEOF
 }
 
 func (s *hubStream) reportOpen(err error) { s.openedOnce.Do(func() { s.opened <- err }) }
+func (s *hubStream) close() {
+	if s.writer != nil {
+		s.writer.close()
+	} else {
+		_ = s.conn.Close()
+	}
+}
 
 type hubSession struct {
 	id       uint64
@@ -315,7 +506,7 @@ func (s *hubSession) remove(id uint32, closeConn bool) *hubStream {
 		metricActive.Add(-1)
 	}
 	if st != nil && closeConn {
-		_ = st.conn.Close()
+		st.close()
 		st.reportOpen(errors.New("stream closed"))
 	}
 	return st
@@ -325,7 +516,7 @@ func (s *hubSession) shutdown() {
 		s.wire.close()
 		s.mu.Lock()
 		for id, st := range s.streams {
-			_ = st.conn.Close()
+			st.close()
 			st.reportOpen(net.ErrClosed)
 			delete(s.streams, id)
 			metricActive.Add(-1)
@@ -342,7 +533,7 @@ func (s *hubSession) addStream(c net.Conn, portID ...string) (uint32, *hubStream
 	if id == 0 {
 		id = s.next.Add(1)
 	}
-	st := &hubStream{conn: c, opened: make(chan error, 1)}
+	st := &hubStream{conn: c, opened: make(chan error, 1), inflight: make(chan struct{}, streamWindowFrames)}
 	s.mu.Lock()
 	select {
 	case <-s.wire.done:
@@ -354,6 +545,19 @@ func (s *hubSession) addStream(c net.Conn, portID ...string) (uint32, *hubStream
 		s.mu.Unlock()
 		return 0, nil, errMaxConcurrentStreams
 	}
+	st.writer = newStreamWriter(c,
+		func() error { return s.wire.send(msgDataAck, id, nil) },
+		func() {
+			if st.eof.mark(false) {
+				s.remove(id, true)
+			}
+		},
+		func(err error) {
+			if s.remove(id, true) != nil {
+				_ = s.wire.send(msgClose, id, nil)
+			}
+		},
+	)
 	s.streams[id] = st
 	metricActive.Add(1)
 	metricTotal.Add(1)
@@ -382,20 +586,38 @@ func (s *hubSession) addStream(c net.Conn, portID ...string) (uint32, *hubStream
 func (s *hubSession) pumpPublicToAgent(id uint32, st *hubStream) {
 	buf := make([]byte, 32*1024)
 	for {
-		n, err := st.conn.Read(buf)
+		n, readErr := st.conn.Read(buf)
 		if n > 0 {
-			if e := s.wire.send(msgData, id, buf[:n]); e != nil {
-				break
+			select {
+			case st.inflight <- struct{}{}:
+			case <-st.writer.done:
+				return
+			}
+			if err := s.wire.send(msgData, id, buf[:n]); err != nil {
+				acknowledge(st.inflight)
+				s.remove(id, true)
+				return
 			}
 			metricSent.Add(uint64(n))
 		}
-		if err != nil {
-			break
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				if err := s.wire.send(msgHalfClose, id, nil); err != nil {
+					s.remove(id, true)
+					return
+				}
+				if st.eof.mark(true) {
+					s.remove(id, true)
+				}
+				return
+			}
+			_ = s.wire.send(msgClose, id, nil)
+			s.remove(id, true)
+			return
 		}
 	}
-	_ = s.wire.send(msgClose, id, nil)
-	s.remove(id, true)
 }
+
 func (s *hubSession) run() {
 	defer s.shutdown()
 	stop := make(chan struct{})
@@ -424,11 +646,22 @@ func (s *hubSession) run() {
 			}
 		case msgData:
 			if st != nil {
-				if err := writeFull(st.conn, f.data); err != nil {
-					s.remove(f.id, true)
-					_ = s.wire.send(msgClose, f.id, nil)
+				if !st.writer.enqueue(f.data) {
+					if s.remove(f.id, true) != nil {
+						_ = s.wire.send(msgClose, f.id, nil)
+					}
 				} else {
 					metricReceived.Add(uint64(len(f.data)))
+				}
+			}
+		case msgDataAck:
+			if st != nil {
+				acknowledge(st.inflight)
+			}
+		case msgHalfClose:
+			if st != nil && !st.writer.enqueueHalfClose() {
+				if s.remove(f.id, true) != nil {
+					_ = s.wire.send(msgClose, f.id, nil)
 				}
 			}
 		case msgClose:
@@ -446,11 +679,22 @@ func (s *hubSession) run() {
 }
 
 type agentStream struct {
-	conn net.Conn
-	once sync.Once
+	conn     net.Conn
+	once     sync.Once
+	writer   *streamWriter
+	inflight chan struct{}
+	eof      streamEOF
 }
 
-func (s *agentStream) close() { s.once.Do(func() { _ = s.conn.Close() }) }
+func (s *agentStream) close() {
+	s.once.Do(func() {
+		if s.writer != nil {
+			s.writer.close()
+		} else {
+			_ = s.conn.Close()
+		}
+	})
+}
 
 type agentSession struct {
 	wire     *wire
@@ -510,7 +754,20 @@ func (s *agentSession) openTarget(id uint32, key string) {
 		return
 	}
 	tuneTCPConn(c)
-	st := &agentStream{conn: c}
+	st := &agentStream{conn: c, inflight: make(chan struct{}, streamWindowFrames)}
+	st.writer = newStreamWriter(c,
+		func() error { return s.wire.send(msgDataAck, id, nil) },
+		func() {
+			if st.eof.mark(false) {
+				s.remove(id, true)
+			}
+		},
+		func(err error) {
+			if s.remove(id, true) != nil {
+				_ = s.wire.send(msgClose, id, nil)
+			}
+		},
+	)
 	s.mu.Lock()
 	select {
 	case <-s.wire.done:
@@ -538,20 +795,38 @@ func (s *agentSession) openTarget(id uint32, key string) {
 func (s *agentSession) pumpTargetToHub(id uint32, st *agentStream) {
 	buf := make([]byte, 32*1024)
 	for {
-		n, err := st.conn.Read(buf)
+		n, readErr := st.conn.Read(buf)
 		if n > 0 {
-			if e := s.wire.send(msgData, id, buf[:n]); e != nil {
-				break
+			select {
+			case st.inflight <- struct{}{}:
+			case <-st.writer.done:
+				return
+			}
+			if err := s.wire.send(msgData, id, buf[:n]); err != nil {
+				acknowledge(st.inflight)
+				s.remove(id, true)
+				return
 			}
 			metricSent.Add(uint64(n))
 		}
-		if err != nil {
-			break
+		if readErr != nil {
+			if errors.Is(readErr, io.EOF) {
+				if err := s.wire.send(msgHalfClose, id, nil); err != nil {
+					s.remove(id, true)
+					return
+				}
+				if st.eof.mark(true) {
+					s.remove(id, true)
+				}
+				return
+			}
+			_ = s.wire.send(msgClose, id, nil)
+			s.remove(id, true)
+			return
 		}
 	}
-	_ = s.wire.send(msgClose, id, nil)
-	s.remove(id, true)
 }
+
 func (s *agentSession) run() {
 	defer s.shutdown()
 	stop := make(chan struct{})
@@ -569,11 +844,24 @@ func (s *agentSession) run() {
 		case msgData:
 			st := s.get(f.id)
 			if st != nil {
-				if err := writeFull(st.conn, f.data); err != nil {
-					s.remove(f.id, true)
-					_ = s.wire.send(msgClose, f.id, nil)
+				if !st.writer.enqueue(f.data) {
+					if s.remove(f.id, true) != nil {
+						_ = s.wire.send(msgClose, f.id, nil)
+					}
 				} else {
 					metricReceived.Add(uint64(len(f.data)))
+				}
+			}
+		case msgDataAck:
+			st := s.get(f.id)
+			if st != nil {
+				acknowledge(st.inflight)
+			}
+		case msgHalfClose:
+			st := s.get(f.id)
+			if st != nil && !st.writer.enqueueHalfClose() {
+				if s.remove(f.id, true) != nil {
+					_ = s.wire.send(msgClose, f.id, nil)
 				}
 			}
 		case msgClose:
@@ -882,13 +1170,13 @@ func relayTCP(client net.Conn, target string) {
 
 func authProtocol(line, token string) string {
 	line = strings.TrimSpace(line)
-	const prefix = "RREV2 "
+	const prefix = "RREV3 "
 	if !strings.HasPrefix(line, prefix) {
 		return ""
 	}
 	got := strings.TrimPrefix(line, prefix)
 	if len(got) == len(token) && subtle.ConstantTimeCompare([]byte(got), []byte(token)) == 1 {
-		return "RREV2"
+		return "RREV3"
 	}
 	return ""
 }
@@ -978,7 +1266,7 @@ func connectAndRunAgent(cfg Config, pin []byte, channel int) error {
 		return err
 	}
 	_ = c.SetDeadline(time.Now().Add(10 * time.Second))
-	if err = writeFull(c, []byte("RREV2 "+cfg.Token+"\n")); err != nil {
+	if err = writeFull(c, []byte("RREV3 "+cfg.Token+"\n")); err != nil {
 		_ = c.Close()
 		return err
 	}
@@ -1676,9 +1964,10 @@ func uninstall() error {
 	return nil
 }
 
-// ServerGeo is a cached public-egress IP and country lookup. It is fetched
-// from ipapi.co with a short timeout, cached on disk, and never blocks the tunnel
-// service itself. This lookup discloses the server's public egress IP to that API.
+// ServerGeo caches the server's public IPv4 address and its GeoIP country.
+// IP discovery is independent from GeoIP: if all GeoIP services are blocked,
+// a valid IPv4 can still be shown while country is reported as Unknown.
+// Public IPs are sent to the selected third-party IP/GeoIP provider.
 type ServerGeo struct {
 	IP          string    `json:"ip"`
 	Country     string    `json:"country_name"`
@@ -1688,17 +1977,20 @@ type ServerGeo struct {
 	Valid       bool      `json:"valid"`
 }
 
-const serverGeoCachePath = "/etc/ravanreverse/server-info.json"
+const serverGeoCachePath = "/etc/ravanreverse/server-info-v2.json"
+
+const (
+	geoFailureRetryInterval = 45 * time.Second
+	geoCacheTTL             = 6 * time.Hour
+	geoRequestTimeout       = 2200 * time.Millisecond
+)
 
 func normalizeServerGeo(g ServerGeo) ServerGeo {
 	rawIP := strings.TrimSpace(g.IP)
 	if rawIP == "" {
-		if g.Valid {
-			g.Valid = false
-		}
+		g.Valid = false
 		return g
 	}
-
 	parsed := net.ParseIP(rawIP)
 	if parsed == nil || parsed.To4() == nil {
 		// The menu is deliberately IPv4-only. Invalidate old IPv6/bad cache
@@ -1743,82 +2035,424 @@ func writeServerGeoCache(g ServerGeo) {
 	_ = os.Chmod(serverGeoCachePath, 0600)
 }
 
+// isPublicIPv4 rejects private, local, shared-CGNAT, documentation, benchmark,
+// multicast and reserved IPv4 space. Interface addresses are preferred because
+// they require no external service and continue to work on filtered networks.
+func isPublicIPv4(ip net.IP) bool {
+	v4 := ip.To4()
+	if v4 == nil || v4.IsPrivate() || v4.IsLoopback() || v4.IsLinkLocalUnicast() || v4.IsMulticast() || v4.IsUnspecified() {
+		return false
+	}
+	a, b, c := v4[0], v4[1], v4[2]
+	if a == 0 || a >= 240 || (a == 100 && b >= 64 && b <= 127) ||
+		(a == 192 && b == 0 && c == 0) || (a == 192 && b == 0 && c == 2) ||
+		(a == 198 && (b == 18 || b == 19)) || (a == 198 && b == 51 && c == 100) ||
+		(a == 203 && b == 0 && c == 113) {
+		return false
+	}
+	return true
+}
+
+// detectAssignedPublicIPv4 finds an IPv4 assigned directly to the active route
+// first. It deliberately refuses private/interface-local addresses, which are
+// not the public identity the menu should advertise.
+func detectAssignedPublicIPv4() string {
+	var routeDev string
+	if out, err := exec.Command("ip", "-4", "route", "get", "1.1.1.1").Output(); err == nil {
+		fields := strings.Fields(string(out))
+		for i := 0; i+1 < len(fields); i++ {
+			if fields[i] == "src" {
+				if parsed := net.ParseIP(fields[i+1]); isPublicIPv4(parsed) {
+					return parsed.To4().String()
+				}
+			}
+			if fields[i] == "dev" {
+				routeDev = fields[i+1]
+			}
+		}
+	}
+
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		return ""
+	}
+	// Check the route interface before other interfaces, to avoid selecting an
+	// address from an unrelated or dormant interface when possible.
+	if routeDev != "" {
+		for _, iface := range interfaces {
+			if iface.Name == routeDev {
+				if ip := publicIPv4OnInterface(iface); ip != "" {
+					return ip
+				}
+				break
+			}
+		}
+	}
+	for _, iface := range interfaces {
+		if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 || iface.Name == routeDev {
+			continue
+		}
+		if ip := publicIPv4OnInterface(iface); ip != "" {
+			return ip
+		}
+	}
+	return ""
+}
+
+func publicIPv4OnInterface(iface net.Interface) string {
+	if iface.Flags&net.FlagUp == 0 || iface.Flags&net.FlagLoopback != 0 {
+		return ""
+	}
+	addrs, err := iface.Addrs()
+	if err != nil {
+		return ""
+	}
+	for _, addr := range addrs {
+		var ip net.IP
+		switch a := addr.(type) {
+		case *net.IPNet:
+			ip = a.IP
+		case *net.IPAddr:
+			ip = a.IP
+		}
+		if isPublicIPv4(ip) {
+			return ip.To4().String()
+		}
+	}
+	return ""
+}
+
+func geoHTTPClient(timeout time.Duration) *http.Client {
+	transport := &http.Transport{
+		// Do not silently use an HTTP_PROXY/HTTPS_PROXY setting: that would
+		// identify the proxy's address instead of the server's public address.
+		Proxy: nil,
+		DialContext: func(ctx context.Context, _ string, addr string) (net.Conn, error) {
+			d := net.Dialer{Timeout: timeout, KeepAlive: 15 * time.Second}
+			return d.DialContext(ctx, "tcp4", addr)
+		},
+		TLSHandshakeTimeout:   timeout,
+		ResponseHeaderTimeout: timeout,
+		ForceAttemptHTTP2:     true,
+	}
+	return &http.Client{Timeout: timeout, Transport: transport}
+}
+
+func fetchGeoFromURL(ctx context.Context, client *http.Client, rawURL, expectedIP string) (ServerGeo, bool) {
+	var zero ServerGeo
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return zero, false
+	}
+	req.Header.Set("User-Agent", "ShahTunnel/"+version)
+	req.Header.Set("Accept", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return zero, false
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return zero, false
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 64*1024))
+	if err != nil {
+		return zero, false
+	}
+	return parseGeoResponse(body, expectedIP)
+}
+
+func parseGeoResponse(body []byte, expectedIP string) (ServerGeo, bool) {
+	var zero ServerGeo
+	var result struct {
+		IP          string `json:"ip"`
+		Query       string `json:"query"`
+		CountryName string `json:"country_name"`
+		Country     string `json:"country"`
+		CountryCode string `json:"country_code"`
+		CodeCamel   string `json:"countryCode"`
+		Status      string `json:"status"`
+		Success     *bool  `json:"success"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil || strings.EqualFold(result.Status, "fail") || (result.Success != nil && !*result.Success) {
+		return zero, false
+	}
+	returnedIP := strings.TrimSpace(result.IP)
+	if returnedIP == "" {
+		returnedIP = strings.TrimSpace(result.Query)
+	}
+	if expectedIP != "" {
+		expected := net.ParseIP(expectedIP)
+		if expected == nil || expected.To4() == nil {
+			return zero, false
+		}
+		if returnedIP != "" {
+			got := net.ParseIP(returnedIP)
+			if got == nil || got.To4() == nil || !got.To4().Equal(expected.To4()) {
+				return zero, false
+			}
+		}
+		returnedIP = expected.To4().String()
+	}
+	parsedIP := net.ParseIP(returnedIP)
+	if !isPublicIPv4(parsedIP) {
+		return zero, false
+	}
+
+	country := strings.TrimSpace(result.CountryName)
+	code := strings.ToUpper(strings.TrimSpace(result.CountryCode))
+	if code == "" {
+		code = strings.ToUpper(strings.TrimSpace(result.CodeCamel))
+	}
+	if country == "" {
+		countryValue := strings.TrimSpace(result.Country)
+		if isAlphaCountryCode(countryValue) {
+			if code == "" {
+				code = strings.ToUpper(countryValue)
+			}
+		} else {
+			country = countryValue
+		}
+	}
+	if country == "" && code != "" {
+		country = countryNameFromCode(code)
+	}
+	if country == "" {
+		country = "Unknown"
+	}
+	if strings.EqualFold(country, "Unknown") {
+		code = ""
+	}
+	return ServerGeo{IP: parsedIP.To4().String(), Country: country, CountryCode: code, UpdatedAt: time.Now(), Valid: true}, true
+}
+
+func isAlphaCountryCode(s string) bool {
+	if len(s) != 2 {
+		return false
+	}
+	for i := 0; i < 2; i++ {
+		c := s[i]
+		if !((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z')) {
+			return false
+		}
+	}
+	return true
+}
+
+func countryNameFromCode(code string) string {
+	// Common fallback names for code-only providers such as ipinfo.io. Country
+	// name remains Unknown for codes we cannot map instead of guessing location.
+	names := map[string]string{
+		"IR": "Iran", "DE": "Germany", "US": "United States", "GB": "United Kingdom",
+		"NL": "Netherlands", "FR": "France", "TR": "Türkiye", "RU": "Russia",
+		"CA": "Canada", "SG": "Singapore", "FI": "Finland", "SE": "Sweden",
+		"CH": "Switzerland", "AT": "Austria", "AE": "United Arab Emirates",
+		"SA": "Saudi Arabia", "CN": "China", "JP": "Japan", "IN": "India",
+		"IT": "Italy", "ES": "Spain", "PL": "Poland", "BE": "Belgium",
+		"CZ": "Czechia", "DK": "Denmark", "NO": "Norway", "UA": "Ukraine",
+		"RO": "Romania", "BG": "Bulgaria", "GR": "Greece", "CY": "Cyprus",
+		"HK": "Hong Kong", "KR": "South Korea", "TW": "Taiwan", "ID": "Indonesia",
+		"MY": "Malaysia", "TH": "Thailand", "BR": "Brazil", "AU": "Australia",
+	}
+	return names[strings.ToUpper(strings.TrimSpace(code))]
+}
+
+func lookupGeoURLs(urls []string, expectedIP string, returnIPOnly bool) (ServerGeo, bool) {
+	var zero ServerGeo
+	client := geoHTTPClient(geoRequestTimeout)
+	defer client.CloseIdleConnections()
+	ctx, cancel := context.WithTimeout(context.Background(), 2600*time.Millisecond)
+	defer cancel()
+	type answer struct {
+		geo ServerGeo
+		ok  bool
+	}
+	results := make(chan answer, len(urls))
+	for _, rawURL := range urls {
+		url := rawURL
+		go func() {
+			g, ok := fetchGeoFromURL(ctx, client, url, expectedIP)
+			select {
+			case results <- answer{geo: g, ok: ok}:
+			case <-ctx.Done():
+			}
+		}()
+	}
+	var ipOnly ServerGeo
+	for range urls {
+		select {
+		case got := <-results:
+			if !got.ok || !got.geo.Valid {
+				continue
+			}
+			if got.geo.Country != "" && !strings.EqualFold(got.geo.Country, "Unknown") {
+				return got.geo, true
+			}
+			if !ipOnly.Valid {
+				ipOnly = got.geo
+			}
+		case <-ctx.Done():
+			if returnIPOnly && ipOnly.Valid {
+				return ipOnly, true
+			}
+			return zero, false
+		}
+	}
+	if returnIPOnly && ipOnly.Valid {
+		return ipOnly, true
+	}
+	return zero, false
+}
+
+func detectPublicIPv4FromAPIs() string {
+	urls := []string{
+		"https://api.ipify.org/",
+		"https://ipv4.icanhazip.com/",
+		"https://checkip.amazonaws.com/",
+		"https://ipinfo.io/ip",
+		"https://api.ip.sb/ip",
+	}
+	client := geoHTTPClient(geoRequestTimeout)
+	defer client.CloseIdleConnections()
+	ctx, cancel := context.WithTimeout(context.Background(), 2600*time.Millisecond)
+	defer cancel()
+	type answer struct{ ip string }
+	results := make(chan answer, len(urls))
+	for _, rawURL := range urls {
+		url := rawURL
+		go func() {
+			var got answer
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+			if err == nil {
+				req.Header.Set("User-Agent", "ShahTunnel/"+version)
+				resp, reqErr := client.Do(req)
+				if reqErr == nil {
+					if resp.StatusCode == http.StatusOK {
+						body, _ := io.ReadAll(io.LimitReader(resp.Body, 256))
+						ip := net.ParseIP(strings.TrimSpace(string(body)))
+						if isPublicIPv4(ip) {
+							got.ip = ip.To4().String()
+						}
+					}
+					_ = resp.Body.Close()
+				}
+			}
+			select {
+			case results <- got:
+			case <-ctx.Done():
+			}
+		}()
+	}
+	for range urls {
+		select {
+		case got := <-results:
+			if got.ip != "" {
+				return got.ip
+			}
+		case <-ctx.Done():
+			return ""
+		}
+	}
+	return ""
+}
+
+func lookupCountryForIPv4(ip string) (ServerGeo, bool) {
+	urls := []string{
+		"https://ipapi.co/" + ip + "/json/",
+		"https://ipwho.is/" + ip,
+		"https://api.ip.sb/geoip/" + ip,
+		"https://ipinfo.io/" + ip + "/json",
+	}
+	return lookupGeoURLs(urls, ip, false)
+}
+
+func lookupCombinedServerGeo() (ServerGeo, bool) {
+	urls := []string{
+		"https://ipapi.co/json/",
+		"https://ipwho.is/",
+		"https://ipinfo.io/json",
+	}
+	return lookupGeoURLs(urls, "", true)
+}
+
 func serverIdentity() (string, string) {
 	g := readServerGeoCache()
 	now := time.Now()
-	if !g.LastAttempt.IsZero() && now.Sub(g.LastAttempt) < 5*time.Minute {
+	if !g.LastAttempt.IsZero() && now.Sub(g.LastAttempt) >= 0 && now.Sub(g.LastAttempt) < geoFailureRetryInterval {
 		return geoDisplay(g)
 	}
-	if g.Valid && !g.UpdatedAt.IsZero() && now.Sub(g.UpdatedAt) < 6*time.Hour {
+	if g.Valid && g.Country != "" && !strings.EqualFold(g.Country, "Unknown") && !g.UpdatedAt.IsZero() && now.Sub(g.UpdatedAt) >= 0 && now.Sub(g.UpdatedAt) < geoCacheTTL {
 		return geoDisplay(g)
 	}
 
 	g.LastAttempt = now
-	// Force IPv4 at the socket layer. Without tcp4, dual-stack hosts may
-	// report their IPv6 egress address (and its GeoIP result) as the server IP.
-	transport := &http.Transport{
-		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			d := net.Dialer{Timeout: 1500 * time.Millisecond, KeepAlive: 15 * time.Second}
-			return d.DialContext(ctx, "tcp4", addr)
-		},
-		TLSHandshakeTimeout:   1500 * time.Millisecond,
-		ResponseHeaderTimeout: 2 * time.Second,
-	}
-	defer transport.CloseIdleConnections()
-	client := &http.Client{Timeout: 3500 * time.Millisecond, Transport: transport}
-	req, err := http.NewRequest(http.MethodGet, "https://ipapi.co/json/", nil)
-	if err == nil {
-		req.Header.Set("User-Agent", "ShahTunnel/"+version)
-		var resp *http.Response
-		resp, err = client.Do(req)
-		if err == nil {
-			defer resp.Body.Close()
-			if resp.StatusCode == http.StatusOK {
-				var result struct {
-					IP          string `json:"ip"`
-					Country     string `json:"country_name"`
-					CountryAlt  string `json:"country"`
-					CountryCode string `json:"country_code"`
-				}
-				if json.NewDecoder(io.LimitReader(resp.Body, 64*1024)).Decode(&result) == nil {
-					parsedIP := net.ParseIP(strings.TrimSpace(result.IP))
-					// Never cache or display IPv6 as the primary server identity.
-					if parsedIP != nil && parsedIP.To4() != nil {
-						country := strings.TrimSpace(result.Country)
-						if country == "" {
-							country = strings.TrimSpace(result.CountryAlt)
-						}
-						if country != "" {
-							g.IP = parsedIP.To4().String()
-							g.Country = country
-							g.CountryCode = strings.ToUpper(strings.TrimSpace(result.CountryCode))
-							g.UpdatedAt = now
-							g.Valid = true
-						}
-					}
-				}
-			}
+	ip := detectAssignedPublicIPv4()
+	var combined ServerGeo
+	var combinedOK bool
+	if ip == "" {
+		// For NAT/private-interface VPSs, discover the public IPv4 through
+		// multiple providers. One blocked provider must not blank the menu.
+		combined, combinedOK = lookupCombinedServerGeo()
+		if combinedOK {
+			ip = combined.IP
+		}
+		if ip == "" {
+			ip = detectPublicIPv4FromAPIs()
 		}
 	}
-	writeServerGeoCache(g)
-	return geoDisplay(g)
+
+	if ip == "" {
+		// Keep a previously verified IPv4 visible during a temporary API/network
+		// outage instead of replacing it with Unavailable.
+		if g.Valid && g.IP != "" {
+			g.LastAttempt = now
+			writeServerGeoCache(g)
+			return geoDisplay(g)
+		}
+		g.Valid = false
+		g.LastAttempt = now
+		writeServerGeoCache(g)
+		return geoDisplay(g)
+	}
+
+	next := ServerGeo{IP: ip, Valid: true, UpdatedAt: now, LastAttempt: now}
+	if combinedOK && combined.IP == ip && combined.Country != "" && !strings.EqualFold(combined.Country, "Unknown") {
+		next.Country = combined.Country
+		next.CountryCode = combined.CountryCode
+		next.UpdatedAt = combined.UpdatedAt
+	} else if countryGeo, ok := lookupCountryForIPv4(ip); ok && countryGeo.Country != "" && !strings.EqualFold(countryGeo.Country, "Unknown") {
+		next.Country = countryGeo.Country
+		next.CountryCode = countryGeo.CountryCode
+		next.UpdatedAt = countryGeo.UpdatedAt
+	} else if g.Valid && g.IP == ip {
+		// A transient GeoIP outage should not erase a previously correct country.
+		next.Country = g.Country
+		next.CountryCode = g.CountryCode
+		next.UpdatedAt = g.UpdatedAt
+	}
+	writeServerGeoCache(next)
+	return geoDisplay(next)
 }
 
 func geoDisplay(g ServerGeo) (string, string) {
 	g = normalizeServerGeo(g)
-	if !g.Valid || strings.TrimSpace(g.IP) == "" || strings.TrimSpace(g.Country) == "" {
+	if !g.Valid || strings.TrimSpace(g.IP) == "" {
 		return "Unavailable", "Unknown"
 	}
-	country := g.Country
-	if g.CountryCode != "" {
+	country := strings.TrimSpace(g.Country)
+	if country == "" || strings.EqualFold(country, "Unknown") {
+		country = "Unknown"
+	} else if g.CountryCode != "" && !strings.EqualFold(country, g.CountryCode) {
 		country += " (" + g.CountryCode + ")"
 	}
-	if !g.UpdatedAt.IsZero() && time.Since(g.UpdatedAt) > 6*time.Hour {
-		country += " [cached]"
+	if !g.UpdatedAt.IsZero() && time.Since(g.UpdatedAt) > geoCacheTTL {
+		if country == "Unknown" {
+			country = "Unknown [cached IP]"
+		} else {
+			country += " [cached]"
+		}
 	}
 	return g.IP, country
 }
-
 func menu() {
 	if !ensureRoot() {
 		return

@@ -1,6 +1,6 @@
 ![Shah Tunnel logo](docs/img/shah-tunnel-logo.svg)
 
-# Shah Tunnel — Version 1.3.6
+# Shah Tunnel — Version 1.3.8
 
 **Language / زبان:** [🇬🇧 English](README.md) · [🇮🇷 فارسی](README-fa.md)
 

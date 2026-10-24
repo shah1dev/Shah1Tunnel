@@ -1,11 +1,16 @@
 Product: Shah Tunnel
-Version: 1.3.6
+Version: 1.3.8
 Target: Linux amd64 / x86_64
 Language: Go (standard library only)
-Security: existing TLS 1.2+, SHA-256 certificate pinning and token authentication retained
-Root performance change: four independent authenticated TCP/TLS lanes by default; Hub routes new streams to the least-loaded healthy lane
-Legacy compatibility: missing tunnel_channels in an Agent config defaults to 4; wire protocol remains RREV2, but an old Hub replaces concurrent Agent lanes, so upgrade Hub first, then Agent
+Security: TLS 1.2+, SHA-256 certificate pinning and token authentication retained
+Root reliability fix: the shared frame reader no longer performs blocking destination writes; each stream has an isolated bounded writer
+Flow control: eight outstanding 32-KiB data frames per stream, acknowledged only after destination writes complete
+Memory safety: 32-MiB global cap for queued tunnel payload plus bounded per-stream queues
+Stream semantics: directional TCP half-close is preserved; hard failures still reset only the affected stream when possible
+Transport safety: 30-second write deadline; a partial frame/write failure closes the lane to avoid reusing a corrupted frame stream
+Lane strategy: four independently authenticated TCP/TLS lanes by default; each lane reconnects independently and the Hub routes new streams to the least-loaded healthy lane
+Protocol: RREV3; both Hub and Agent must be upgraded together because RREV2 does not understand data acknowledgements or half-close messages
 Source: main.go and main_test.go included
-Server identity fix: force TCP over IPv4 for GeoIP lookup; reject IPv6 results and invalidate stale cached IPv6 identities. Added regression tests.
-Validation: go test -race ./..., go vet ./..., bash -n install scripts, Linux amd64 build, version/checksum validation, ZIP integrity
-Note: this addresses shared outer-TCP head-of-line blocking by splitting streams over independent TCP congestion windows. Real-world throughput still depends on the two VPS plans and interconnect quality.
+Validation completed: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh, Linux amd64 build, binary version/checksum validation, ZIP integrity
+Regression tests include: 30 concurrent clients, slow-target isolation, transfers above the flow-control window, TCP half-close, invalid frame-writer failure closure, TLS lane balancing, and GeoIP fallback behavior
+Note: local tests validate software correctness, not real-world packet loss/throughput on the two production VPS paths. If disconnections remain after both ends run v1.3.8, collect journalctl and TCP retransmission counters from both servers.

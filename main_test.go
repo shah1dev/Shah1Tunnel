@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -30,6 +31,21 @@ func TestFrameRoundTrip(t *testing.T) {
 	}
 	if err = <-done; err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestWireWriteFailureClosesLane(t *testing.T) {
+	a, b := net.Pipe()
+	w := newWire(a)
+	_ = b.Close()
+	defer w.close()
+	if err := w.send(msgData, 1, []byte("partial-frame-must-not-be-reused")); err == nil {
+		t.Fatal("expected a failed write on closed peer")
+	}
+	select {
+	case <-w.done:
+	case <-time.After(time.Second):
+		t.Fatal("write error did not close the framing lane")
 	}
 }
 
@@ -71,6 +87,200 @@ func TestReverseStreamIntegration(t *testing.T) {
 	}
 	if string(got) != string(payload) {
 		t.Fatalf("echo mismatch: got %q want %q", got, payload)
+	}
+}
+
+func TestAgentReceiveLoopDoesNotBlockOnSlowTarget(t *testing.T) {
+	localWire, peerConn := net.Pipe()
+	s := newAgentSession(localWire, map[string]string{})
+	peer := newWire(peerConn)
+	defer peer.close()
+
+	slowDest, slowPeer := net.Pipe()
+	defer slowPeer.Close() // Intentionally never read: its writer must block.
+	fastDest, fastPeer := net.Pipe()
+	defer fastPeer.Close()
+
+	makeStream := func(id uint32, conn net.Conn) *agentStream {
+		st := &agentStream{conn: conn, inflight: make(chan struct{}, streamWindowFrames)}
+		st.writer = newStreamWriter(conn,
+			func() error { return s.wire.send(msgDataAck, id, nil) },
+			func() {
+				if st.eof.mark(false) {
+					s.remove(id, true)
+				}
+			},
+			func(err error) {
+				if s.remove(id, true) != nil {
+					_ = s.wire.send(msgClose, id, nil)
+				}
+			},
+		)
+		return st
+	}
+	slow := makeStream(1, slowDest)
+	fast := makeStream(2, fastDest)
+	s.mu.Lock()
+	s.streams[1] = slow
+	s.streams[2] = fast
+	s.mu.Unlock()
+	go s.run()
+	t.Cleanup(s.shutdown)
+
+	// Start the fast destination reader before sending; net.Pipe intentionally
+	// applies zero-buffer back-pressure, so the slow stream remains blocked.
+	fastRead := make(chan string, 1)
+	go func() {
+		b := make([]byte, 4)
+		if _, err := io.ReadFull(fastPeer, b); err != nil {
+			fastRead <- "ERROR: " + err.Error()
+			return
+		}
+		fastRead <- string(b)
+	}()
+	if err := peer.send(msgData, 1, make([]byte, 32*1024)); err != nil {
+		t.Fatalf("send slow stream frame: %v", err)
+	}
+	if err := peer.send(msgData, 2, []byte("FAST")); err != nil {
+		t.Fatalf("send healthy stream frame while slow writer is blocked: %v", err)
+	}
+	select {
+	case got := <-fastRead:
+		if got != "FAST" {
+			t.Fatalf("healthy stream received %q", got)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("slow target blocked the shared receive loop; healthy stream stalled")
+	}
+	_ = peerConn.SetReadDeadline(time.Now().Add(2 * time.Second))
+	f, err := peer.receive()
+	if err != nil {
+		t.Fatalf("receive ACK for healthy stream while slow writer is blocked: %v", err)
+	}
+	if f.typ != msgDataAck || f.id != 2 {
+		t.Fatalf("expected ACK for stream 2, got type=%d id=%d", f.typ, f.id)
+	}
+	select {
+	case <-s.wire.done:
+		t.Fatal("one slow target incorrectly closed the whole tunnel lane")
+	default:
+	}
+}
+
+func TestReverseStreamIntegrationBeyondFlowControlWindow(t *testing.T) {
+	echo, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer echo.Close()
+	go func() {
+		for {
+			c, e := echo.Accept()
+			if e != nil {
+				return
+			}
+			go func(c net.Conn) { defer c.Close(); _, _ = io.Copy(c, c) }(c)
+		}
+	}()
+
+	a, b := net.Pipe()
+	hs := newHubSession(a)
+	as := newAgentSession(b, map[string]string{"main": echo.Addr().String()})
+	go hs.run()
+	go as.run()
+	defer hs.shutdown()
+	defer as.shutdown()
+
+	tunnelSide, client := net.Pipe()
+	defer client.Close()
+	if _, _, err := hs.addStream(tunnelSide, "main"); err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	_ = client.SetDeadline(time.Now().Add(15 * time.Second))
+	unit := []byte("independent-stream-credit-window/")
+	payload := bytes.Repeat(unit, (2<<20)/len(unit)+1) // More than eight 32-KiB frames.
+	writeDone := make(chan error, 1)
+	go func() { _, e := client.Write(payload); writeDone <- e }()
+	got := make([]byte, len(payload))
+	if _, err := io.ReadFull(client, got); err != nil {
+		t.Fatalf("read large echo transfer: %v", err)
+	}
+	if !bytes.Equal(got, payload) {
+		t.Fatal("large echo payload changed in transit")
+	}
+	if err := <-writeDone; err != nil {
+		t.Fatalf("write large echo transfer: %v", err)
+	}
+}
+
+func TestReverseTunnelPreservesTCPHalfClose(t *testing.T) {
+	targetListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer targetListener.Close()
+	go func() {
+		for {
+			conn, e := targetListener.Accept()
+			if e != nil {
+				return
+			}
+			go func(c net.Conn) {
+				defer c.Close()
+				request, _ := io.ReadAll(c) // Complete only after CloseWrite is forwarded.
+				_, _ = c.Write(append([]byte("reply:"), request...))
+			}(conn)
+		}
+	}()
+
+	hubWire, agentWire := net.Pipe()
+	hs := newHubSession(hubWire)
+	as := newAgentSession(agentWire, map[string]string{"main": targetListener.Addr().String()})
+	go hs.run()
+	go as.run()
+	defer hs.shutdown()
+	defer as.shutdown()
+
+	publicListener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer publicListener.Close()
+	serverSideCh := make(chan net.Conn, 1)
+	go func() {
+		c, e := publicListener.Accept()
+		if e == nil {
+			serverSideCh <- c
+		}
+	}()
+	client, err := net.DialTimeout("tcp", publicListener.Addr().String(), time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer client.Close()
+	var serverSide net.Conn
+	select {
+	case serverSide = <-serverSideCh:
+	case <-time.After(time.Second):
+		t.Fatal("public TCP accept timed out")
+	}
+	defer serverSide.Close()
+	if _, _, err := hs.addStream(serverSide, "main"); err != nil {
+		t.Fatalf("open stream: %v", err)
+	}
+	_ = client.SetDeadline(time.Now().Add(3 * time.Second))
+	if _, err := client.Write([]byte("request-body")); err != nil {
+		t.Fatal(err)
+	}
+	if err := client.(*net.TCPConn).CloseWrite(); err != nil {
+		t.Fatal(err)
+	}
+	got, err := io.ReadAll(client)
+	if err != nil {
+		t.Fatalf("read response after half-close: %v", err)
+	}
+	if string(got) != "reply:request-body" {
+		t.Fatalf("got %q, want %q", got, "reply:request-body")
 	}
 }
 
@@ -188,13 +398,13 @@ func TestRelayTCPPassThrough(t *testing.T) {
 
 func TestAuthProtocolRequiresCurrentVersion(t *testing.T) {
 	token := strings.Repeat("a", 64)
-	if got := authProtocol("RREV2 "+token+"\n", token); got != "RREV2" {
+	if got := authProtocol("RREV3 "+token+"\n", token); got != "RREV3" {
 		t.Fatalf("current protocol rejected: %q", got)
 	}
-	if validAuth("RREV1 "+token+"\n", token) {
+	if validAuth("RREV2 "+token+"\n", token) || validAuth("RREV1 "+token+"\n", token) {
 		t.Fatal("obsolete protocol accepted")
 	}
-	if validAuth("RREV2 "+strings.Repeat("b", 64), token) {
+	if validAuth("RREV3 "+strings.Repeat("b", 64), token) {
 		t.Fatal("invalid token accepted")
 	}
 }
@@ -523,5 +733,61 @@ func TestMultipleAuthenticatedTLSTunnelLanesCarryThirtyClients(t *testing.T) {
 	}
 	if activeLanes[0].activeStreams() == 0 || activeLanes[1].activeStreams() == 0 {
 		t.Fatalf("the 30 client streams were not distributed over both lanes: %d and %d", activeLanes[0].activeStreams(), activeLanes[1].activeStreams())
+	}
+}
+
+func TestGeoDisplayKeepsIPv4WhenCountryLookupFails(t *testing.T) {
+	g := ServerGeo{IP: "94.101.187.48", UpdatedAt: time.Now(), LastAttempt: time.Now(), Valid: true}
+	ip, country := geoDisplay(g)
+	if ip != "94.101.187.48" || country != "Unknown" {
+		t.Fatalf("a valid IPv4 must remain visible when GeoIP fails: ip=%q country=%q", ip, country)
+	}
+}
+
+func TestIsPublicIPv4(t *testing.T) {
+	cases := []struct {
+		ip   string
+		want bool
+	}{
+		{"94.101.187.48", true},
+		{"8.8.8.8", true},
+		{"10.0.0.1", false},
+		{"192.168.1.1", false},
+		{"100.64.0.1", false},
+		{"127.0.0.1", false},
+		{"169.254.1.1", false},
+		{"203.0.113.9", false},
+		{"2a01:4f8:c010:33c3::1", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.ip, func(t *testing.T) {
+			got := isPublicIPv4(net.ParseIP(tc.ip))
+			if got != tc.want {
+				t.Fatalf("isPublicIPv4(%q)=%v, want %v", tc.ip, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseGeoResponseMapsIranCountryCode(t *testing.T) {
+	body := []byte(`{"ip":"94.101.187.48","country":"IR","country_code":"IR","success":true}`)
+	g, ok := parseGeoResponse(body, "94.101.187.48")
+	if !ok || !g.Valid || g.IP != "94.101.187.48" || g.Country != "Iran" || g.CountryCode != "IR" {
+		t.Fatalf("unexpected parsed GeoIP result: ok=%v geo=%#v", ok, g)
+	}
+}
+
+func TestParseGeoResponseRejectsMismatchedIP(t *testing.T) {
+	body := []byte(`{"ip":"8.8.8.8","country_name":"United States","country_code":"US"}`)
+	if _, ok := parseGeoResponse(body, "94.101.187.48"); ok {
+		t.Fatal("GeoIP result for a different address must be rejected")
+	}
+}
+
+func TestParseGeoResponseMapsIranWhenOnlyCountryCodeIsAvailable(t *testing.T) {
+	body := []byte(`{"ip":"94.101.187.48","country":"IR"}`)
+	g, ok := parseGeoResponse(body, "94.101.187.48")
+	if !ok || g.Country != "Iran" || g.CountryCode != "IR" {
+		t.Fatalf("country-code-only provider should map IR to Iran: ok=%v geo=%#v", ok, g)
 	}
 }
