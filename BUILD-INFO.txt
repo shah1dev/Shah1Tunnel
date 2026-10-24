@@ -1,8 +1,0 @@
-Product: Shah Tunnel
-Version: 1.3.3
-Target: Linux amd64 (x86_64)
-Language: Go (standard library only)
-Tunnel: authenticated reverse TCP over TLS
-Country display: public-egress-IP geolocation via ipapi.co, cached for six hours
-Installer behavior: root-owned runtime/config; release package source and ZIP removed on successful install from canonical release folder
-Validation: go test ./..., go vet ./..., bash -n install.sh, Linux amd64 build, executable version output, ZIP integrity
