@@ -1,6 +1,6 @@
 ![لوگوی شاه تونل](docs/img/shah-tunnel-logo.svg)
 
-# شاه تونل (Shah Tunnel) — نسخهٔ 1.3.9
+# شاه تونل (Shah Tunnel) — نسخهٔ 1.3.10
 
 **زبان / Language:** [🇮🇷 فارسی](README-fa.md) · [🇬🇧 English](README.md)
 

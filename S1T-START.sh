@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 # Downloads only the compiled binary and verifies it before installation.
 BASE_URL="https://raw.githubusercontent.com/shah1dev/ShahTunnel/main"
-VERSION="1.3.9"
+VERSION="1.3.10"
 
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
   echo "Run as root: bash <(curl -fsSL ${BASE_URL}/S1T-START.sh)" >&2
