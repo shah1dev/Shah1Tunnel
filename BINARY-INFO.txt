@@ -1,0 +1,6 @@
+Shah Tunnel binary-only deployment bundle
+Version: 1.3.9
+Target: linux/amd64
+Build: CGO_ENABLED=0, -trimpath, -s -w, no build ID
+Source files are intentionally not included in this ZIP.
+Binary SHA-256: 34f3624d80b2f0b4ff67ce3d606655ac8f621369ace01f755e4ca2094739f610
