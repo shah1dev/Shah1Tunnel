@@ -1,16 +1,17 @@
 Product: Shah Tunnel
-Version: 1.4.0
+Version: 1.4.1
 Target: Linux amd64 / x86_64
 Build: Go; CGO_ENABLED=0; -trimpath; linker flags -s -w -buildid= (debug/symbol tables stripped)
 Security: TLS 1.2+, SHA-256 certificate fingerprint pinning, token authentication
 Protocol: RREV3; Hub and Agent must use compatible versions
 Lanes: four independently authenticated TCP/TLS lanes by default; each reconnects independently with jittered exponential backoff
 Flow control: bounded per-stream acknowledgement windows and process-wide queued payload budget
-Admission control: 512 active plus pending streams per lane; capacity reserved before local target dial
-Target recovery: up to four TCP dial attempts, 2-second timeout per attempt, bounded jittered delays; pending dials cancelled on CLOSE or lane shutdown
-Close-race handling: expected EOF/net.ErrClosed/context cancellation is not logged as an open-stream error; actual open failures are rate-limited
-Lane selection: closed lanes excluded from stream selection
-Command deck: multi-colour ASCII crown and bright cyan slash-letter SHAH TUNNEL wordmark above a frame titled COMMAND DECK (no duplicate name inside the frame)
+Admission control: maximum 512 active plus pending streams per lane; target capacity is reserved before dialing
+Target recovery: up to four TCP dial attempts; 2-second timeout per attempt; bounded jittered retry delay; per-mapping failure logs are rate-limited
+Cancellation: pending target dials are cancelled on CLOSE or lane shutdown; late successful dials are discarded safely
+Close-race handling: expected EOF/net.ErrClosed/context cancellation and common closed-stream races are suppressed; actual open failures are rate-limited
+Lane diagnostics: session endings are reported by reason category without exposing endpoint addresses
+Command deck: clear centered crown icon plus five-point jeweled ASCII crown; bright bold cyan slash-style SHAH TUNNEL wordmark; frame title is COMMAND DECK only (name not duplicated inside the frame)
 Public package: precompiled binary only; Go source and tests are not included
 Validation: go test -race -count=20 ./..., go vet ./..., bash -n S1T-START.sh install.sh; binary version and SHA-256 checked
-Limit: local tests do not measure real-world loss, service restarts or throughput on production VPS links.
+Limit: local tests do not measure real-world loss, provider-initiated reboots, or throughput on production VPS links.
